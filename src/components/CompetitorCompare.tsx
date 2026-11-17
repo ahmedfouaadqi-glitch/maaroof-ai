@@ -18,6 +18,7 @@ import { ProactiveNextStep } from "@/components/ProactiveNextStep";
 import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 import { toast } from "sonner";
 import { SourcesList } from "@/components/SourcesList";
+import { effectiveWorkspaceGeoScope } from "@/lib/workspace-geo-scope";
 import { EngineResponseFlow } from "@/components/EngineResponseFlow";
 
 
@@ -62,12 +63,12 @@ type Result = {
 
 const PLATFORMS = ["chatgpt","gemini","claude","perplexity","copilot","grok","mistral","deepseek","kimi","qwen"] as const;
 
-export function CompetitorCompare() {
+export function CompetitorCompare({ workspaceId = null, workspace = null }: { workspaceId?: string | null; workspace?: any } = {}) {
   const { t, lang } = useI18n();
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch {}
 
-  const [brand, setBrand] = useState("");
+  const [brand, setBrand] = useState(String(workspaceId ? workspace?.entity_truth_card?.entity_name || workspace?.name || "" : ""));
   const [competitors, setCompetitors] = useState("");
   const [keywords, setKeywords] = useState("");
   const [websitesText, setWebsitesText] = useState("");
@@ -75,6 +76,14 @@ export function CompetitorCompare() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<Result | null>(null);
+
+  useEffect(() => {
+    if (workspaceId) {
+      setBrand(workspace?.id === workspaceId ? String(workspace?.entity_truth_card?.entity_name || workspace?.name || "") : "");
+    } else setBrand("");
+    setResult(null);
+    setError(null);
+  }, [workspaceId, workspace]);
 
   const parseWebsites = (): Record<string, string> => {
     const out: Record<string, string> = {};
@@ -116,7 +125,7 @@ export function CompetitorCompare() {
       if (session) headers.Authorization = `Bearer ${session.access_token}`;
       const r = await apiFetch("/api/compare", {
         method: "POST", headers,
-        body: JSON.stringify({ brand: brand.trim(), competitors: list, keywords: keywords.trim(), lang: outLang, scope: getEffectiveScope(auth?.profile, "compare"), websites: parseWebsites() }),
+        body: JSON.stringify({ brand: brand.trim(), competitors: list, keywords: keywords.trim(), lang: outLang, scope: effectiveWorkspaceGeoScope(workspaceId, workspace, getEffectiveScope(auth?.profile, "compare")), websites: parseWebsites(), workspace_id: workspaceId }),
       });
       const data = await r.json();
       if (!r.ok) { setError(errorText(data?.error || "error")); return; }
