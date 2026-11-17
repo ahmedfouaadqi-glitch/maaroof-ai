@@ -122,3 +122,20 @@ Still outstanding:
 6. Finalize the five P0 artifacts and mark every excluded or unverified area explicitly.
 
 No application code, configuration, credentials, database, deployment, or main-branch content was changed.
+
+## 9. Public route inventory — static first pass
+
+The top-level route directory was enumerated. The following public-facing route files were reviewed at source level without entering API, auth, workspace, or database handlers:
+- `/` (landing), `/contact`, `/guide`, `/guide/what-is-geo`, `/guide/geo-vs-aeo`, `/guide/arabic-kurdish-geo`, `/methodology`, `/sitemap.xml`, `/privacy`, `/terms`.
+- `/pricing` was identified but not followed beyond imports because it directly imports the Supabase client and auth provider, which are excluded from this review.
+- The landing route wraps both landing experiences in `AuthProvider`; its transitive auth/service behavior was not inspected.
+- `/contact` reads dynamic contact details through `useContactInfo`; the source of those values was not traced because that could cross service/config boundaries.
+- `/sitemap.xml` delegates to the pure `buildPublicSitemapXml` helper; helper implementation and route output were not runtime-tested.
+- `/privacy` and `/terms` render localized HTML through DOMPurify. Their text contains product/data-handling assertions; static copy is not technical evidence that the described controls are implemented.
+- Public pages expose canonical URLs, Open Graph metadata and JSON-LD. The homepage SoftwareApplication description explicitly says "10 AI search engines", consistent with the protected ten-engine requirement; this is not a review of the protected catalog.
+- `/methodology` publicly describes verification states and evidence chains. It should be treated as a product promise to be checked against implementation and report contracts in later permitted review, not as proof by itself.
+
+### Route review limitations
+- No route was invoked in a browser, no SSR output was inspected, and no accessibility, localization-switching, metadata validation, sitemap URL reachability, or structured-data validation was performed.
+- Authenticated routes, API routes, Lovable integration routes, profile/user routes, workspace routes, admin routes and dynamic data-backed pages remain unreviewed because their call chains may enter excluded authentication or Supabase services.
+- This route batch is a partial public-route inventory only; it does not close the P0 requirement to map all routes and their dependencies.
