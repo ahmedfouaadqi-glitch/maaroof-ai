@@ -1,6 +1,6 @@
 import { inWorkspaceScope } from "@/lib/workspace-scope";
 import { formatDuration } from "@/lib/maaroof/pipeline-cards";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Coins, History, LoaderCircle, Play, RotateCcw, TrendingDown, Wallet, Brain, Building2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,6 +33,8 @@ export function HistoryPanel({ lang, workspaceId, onOpen, onContinue }: { lang: 
   const [loadError, setLoadError] = useState(false);
   const [nextPage, setNextPage] = useState<number | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const activeWorkspaceRef = useRef(workspaceId);
+  activeWorkspaceRef.current = workspaceId;
   useEffect(() => {
     let active = true;
     setJobs(null);
@@ -53,6 +55,7 @@ export function HistoryPanel({ lang, workspaceId, onOpen, onContinue }: { lang: 
 
   async function loadMore() {
     if (nextPage == null || loadingMore) return;
+    const requestedWorkspaceId = workspaceId;
     setLoadingMore(true);
     try {
       const t = await token();
@@ -60,12 +63,13 @@ export function HistoryPanel({ lang, workspaceId, onOpen, onContinue }: { lang: 
       const r = await fetch("/api/maaroof-jobs?" + query.toString(), { headers: { Authorization: "Bearer " + t }, cache: "no-store" });
       if (!r.ok) throw new Error("jobs_page_unavailable");
       const b = await r.json();
+      if (activeWorkspaceRef.current !== requestedWorkspaceId) return;
       setJobs((current) => [...(current || []), ...(Array.isArray(b.jobs) ? b.jobs : [])]);
       setNextPage(Number.isInteger(b?.next_page) ? b.next_page : null);
     } catch {
       setLoadError(true);
     } finally {
-      setLoadingMore(false);
+      if (activeWorkspaceRef.current === requestedWorkspaceId) setLoadingMore(false);
     }
   }
 
