@@ -91,6 +91,17 @@ export function PostSuggester({
   const videoRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    setDesc(initialSourceText || "");
+    setImageData(null);
+    setImageMime(null);
+    setVideoUrl(null);
+    setVideoDuration(null);
+    setPost(null);
+    setResult(null);
+    setError(null);
+  }, [workspaceId, workspace?.id, initialSourceText]);
+
+  useEffect(() => {
     const onReuse = (e: Event) => {
       const detail = (e as CustomEvent).detail as { text?: string } | undefined;
       if (detail?.text) {
