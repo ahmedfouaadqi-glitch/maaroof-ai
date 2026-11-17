@@ -166,7 +166,7 @@ export const deleteWorkspace = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async () => blockDestructiveOperation("workspace_delete"));
 
-// // Returns (or creates) the knowledge space linked to a workspace, used by the
+// Returns (or creates) the knowledge space linked to a workspace, used by the
 // in-workspace interview. Reuses the existing knowledge space tables.
 export const ensureWorkspaceKnowledgeSpace = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
