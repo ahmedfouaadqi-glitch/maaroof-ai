@@ -12,6 +12,7 @@ import { ENGINE_LOGOS } from "@/components/engine-logos";
 import { ENGINE_CATALOG, isEngineKey } from "@/lib/ai-engines";
 import { sendHandoff } from "@/lib/tool-handoff";
 import { EngineResponseFlow } from "@/components/EngineResponseFlow";
+import { effectiveWorkspaceGeoScope } from "@/lib/workspace-geo-scope";
 
 const TX = {
   ar: {
@@ -61,10 +62,10 @@ async function post(path: string, body: any) {
   return j;
 }
 
-export function KnownDiscovery() {
+export function KnownDiscovery({ workspaceId = null, workspace = null }: { workspaceId?: string | null; workspace?: any } = {}) {
   const { lang } = useI18n();
   const L = TX[(lang as "ar" | "en" | "ku") || "ar"] || TX.ar;
-  const [brand, setBrand] = useState("");
+  const [brand, setBrand] = useState(String(workspaceId ? workspace?.entity_truth_card?.entity_name || workspace?.name || "" : ""));
   const [site, setSite] = useState("");
   const [sector, setSector] = useState("");
   const [depth, setDepth] = useState<"quick" | "deep">("quick");
@@ -77,7 +78,22 @@ export function KnownDiscovery() {
   const auth = useAuth() as any;
   const [stage, setStage] = useState(0);
 
-  useEffect(() => { post("/api/competitor-monitor", { action: "policy" }).then(setPolicy).catch(() => {}); }, []);
+  useEffect(() => {
+    if (workspaceId) {
+      setBrand(workspace?.id === workspaceId ? String(workspace?.entity_truth_card?.entity_name || workspace?.name || "") : "");
+      setSite(workspace?.id === workspaceId ? String(workspace?.brand_url || "") : "");
+      setSector(workspace?.id === workspaceId ? String(workspace?.entity_truth_card?.sector || workspace?.brand_summary || "") : "");
+    } else {
+      setBrand("");
+      setSite("");
+      setSector("");
+    }
+    setResult(null);
+    setPicked([]);
+    setErr("");
+  }, [workspaceId, workspace]);
+
+  useEffect(() => { post("/api/competitor-monitor", { action: "policy", workspace_id: workspaceId }).then(setPolicy).catch(() => {}); }, [workspaceId]);
 
   // Real server-driven progress via SSE: stages arrive as the run advances.
   const run = async (force = false) => {
@@ -87,7 +103,7 @@ export function KnownDiscovery() {
       const r = await apiFetch("/api/known", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}) },
-        body: JSON.stringify({ brand, website: site, sector, depth, lang, force, scope: getEffectiveScope(auth?.profile, "known") }),
+        body: JSON.stringify({ brand, website: site, sector, depth, lang, force, scope: effectiveWorkspaceGeoScope(workspaceId, workspace, getEffectiveScope(auth?.profile, "known")), workspace_id: workspaceId }),
       });
       if (!r.ok || !r.body) {
         const j = await r.json().catch(() => ({}));
@@ -120,9 +136,9 @@ export function KnownDiscovery() {
   const startWatch = async () => {
     setErr(""); setNote("");
     try {
-      await post("/api/competitor-monitor", { action: "create", brand: result?.brand || brand, competitors: picked, frequency_hours: Math.max(24, policy?.policy?.min_frequency_hours || 24), lang });
+      await post("/api/competitor-monitor", { action: "create", brand: result?.brand || brand, competitors: picked, frequency_hours: Math.max(24, policy?.policy?.min_frequency_hours || 24), lang, workspace_id: workspaceId });
       setNote(L.started); setPicked([]);
-      post("/api/competitor-monitor", { action: "policy" }).then(setPolicy).catch(() => {});
+      post("/api/competitor-monitor", { action: "policy", workspace_id: workspaceId }).then(setPolicy).catch(() => {});
     } catch (e: any) { setErr(L.errs[e?.message] || e?.message || "failed"); }
   };
 
