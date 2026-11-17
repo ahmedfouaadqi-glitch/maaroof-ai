@@ -1,7 +1,8 @@
 import type { UnifiedReportData } from "./report-contract-v2";
 
 export type ClientHtmlOptions = { whiteLabel?: { logoUrl?: string; brandColor?: string; companyName?: string }; lang?: "ar"|"en"|"ku" };
-const esc=(v:unknown)=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]!));
+const ESCAPE_MAP: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"' : "&quot;", "\'": "&#39;" };
+const esc = (value: unknown) => String(value ?? "").replace(/[&<>"\']/g, (character) => ESCAPE_MAP[character] ?? character);
 const labels={
  ar:["الملخص التنفيذي","النتائج الرئيسية","تجربة الموقع","المشهد التنافسي","فرص الكلمات المفتاحية","خارطة 30 يوماً","القياس ومؤشرات الأداء","النطاق والمصادر"],
  en:["Executive summary","Key findings","Website experience","Competitor landscape","Keyword opportunities","30-day roadmap","Measurement & KPIs","Scope & sources"],
