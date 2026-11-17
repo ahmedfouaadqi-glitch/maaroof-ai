@@ -74,8 +74,9 @@ export function ReportBuilder() {
   const [pickedSaved, setPickedSaved] = useState<string[]>([]);
   const [savedPayloads, setSavedPayloads] = useState<Record<string, any>>({});
   useEffect(() => {
-    if (!user || activeWorkspaceId) {
-      // Legacy report_drafts rows are account-scoped; never import them into a client workspace.
+    if (!user || activeWorkspaceId === undefined || activeWorkspaceId !== null) {
+      // Wait for workspace resolution; legacy report_drafts rows are account-scoped
+      // and must never flash into a client workspace during initial hydration.
       setSavedItems([]);
       setPickedSaved([]);
       setSavedPayloads({});
@@ -103,8 +104,13 @@ export function ReportBuilder() {
   function toggle(id: MetricId) { setSelected((s) => s.includes(id) ? s.filter((x) => x !== id) : [...s, id]); }
 
   async function loadData() {
-    if (!user) return;
+    if (!user || activeWorkspaceId === undefined) {
+      setData({});
+      setBusy(false);
+      return;
+    }
     setBusy(true);
+    setData({});
     const since = range(days);
     const out: Record<string, any[]> = {};
     for (const k of selected) {
@@ -123,7 +129,11 @@ export function ReportBuilder() {
   }
 
   async function loadTemplates() {
-    if (!user) return;
+    if (!user || activeWorkspaceId === undefined) {
+      setTemplates([]);
+      return;
+    }
+    setTemplates([]);
     let query = supabase.from("report_templates").select("*").eq("user_id", user.id);
     query = activeWorkspaceId ? query.eq("workspace_id", activeWorkspaceId) : query.is("workspace_id", null);
     const { data: rows, error } = await query.order("updated_at", { ascending: false });
