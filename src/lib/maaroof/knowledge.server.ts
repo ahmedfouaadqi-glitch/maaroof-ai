@@ -6,7 +6,7 @@
 // knowledge graph across nine layers, with confidence/freshness/reliability
 // on every node and typed edges between them.
 import { createClient } from "@supabase/supabase-js";
-import { knowledgeRecallScopeFilter } from "./knowledge-scope";
+import { isKnowledgeScopeValid, knowledgeRecallScopeFilter } from "./knowledge-scope";
 
 let _db: ReturnType<typeof createClient> | null = null;
 function db() {
@@ -96,8 +96,7 @@ export type UpsertNodeInput = {
 export async function upsertKnowledgeNode(input: UpsertNodeInput, freshnessDays = 30): Promise<string | null> {
   try {
     const scope = input.scope || (input.userId ? "user" : "platform");
-    if (scope === "workspace" && !input.workspaceId) return null;
-    if (scope === "user" && (!input.userId || !!input.workspaceId)) return null;
+    if ((scope === "platform" || scope === "workspace" || scope === "user") && !isKnowledgeScopeValid(scope, input.userId, input.workspaceId)) return null;
     let q = db()
       .from("knowledge_nodes")
       .select("id, version, confidence, reliability, usage_count")
