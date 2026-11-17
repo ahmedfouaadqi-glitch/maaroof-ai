@@ -78,7 +78,7 @@ export function BrandBoostAgent({ workspaceId = null, workspace = null }: { work
     const { data } = await query.order("created_at", { ascending: false });
     if (activeWorkspaceRef.current === requestedWorkspaceId) setJobs(data || []);
   };
-  useEffect(() => { load(); }, [user?.id, workspaceId]);
+  useEffect(() => { setJobs([]); load(); }, [user?.id, workspaceId]);
 
   const create = async () => {
     if (!user || !brand.trim() || !approved) return;
