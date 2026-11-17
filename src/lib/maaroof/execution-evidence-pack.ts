@@ -13,6 +13,7 @@ export type EvidencePack = {
   text: string;
   included: number;
   omitted: number;
+  omittedFailed: number;
   duplicateCount: number;
   successful: number;
   failed: number;
@@ -80,18 +81,27 @@ export function buildExecutionEvidencePack(
   }
   omitted += Math.max(0, unique.length - maxItems);
 
+  let omittedFailed = Math.max(0, failed.length - 10);
   if (failed.length) {
-    const failureLines = failed.slice(0, 10).map((item) =>
-      "- " + item.tool + ": " + compact(item.output, 220).replace(/\n/g, " "),
-    );
-    const section = "\n## Execution limitations\n" + failureLines.join("\n");
-    if (lines.join("\n").length + section.length <= maxChars) lines.push(section);
+    lines.push("\n## Execution limitations");
+    for (const item of failed.slice(0, 10)) {
+      const failureLine = "- " + item.tool + ": " + compact(item.output, 220).replace(/\n/g, " ");
+      const reserve = omittedFailed > 0
+        ? "\n- " + (omittedFailed + 1) + " additional failed/skipped step summary/summaries omitted because of the prompt size limit."
+        : "\n- Additional failed/skipped step summaries may be omitted because of the prompt size limit.";
+      if (lines.join("\n").length + failureLine.length + reserve.length <= maxChars) lines.push(failureLine);
+      else omittedFailed++;
+    }
+    if (omittedFailed > 0) {
+      lines.push("- " + omittedFailed + " failed/skipped step summary/summaries omitted because of the prompt size limit; full outcomes remain in the run record.");
+    }
   }
   if (omitted) lines.push("\nNote: " + omitted + " successful result(s) omitted from this prompt pack because of item/size limits. Full run outputs remain in the run record.");
   return {
     text: lines.join("\n").slice(0, maxChars),
     included,
     omitted,
+    omittedFailed,
     duplicateCount,
     successful: successful.length,
     failed: failed.length,
