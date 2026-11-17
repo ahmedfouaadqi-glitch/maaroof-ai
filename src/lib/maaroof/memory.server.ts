@@ -149,6 +149,9 @@ export async function remember(opts: {
   // Part 5 consent enforcement. Platform/agent scopes are anonymized elsewhere.
   const consent = await getCognitiveConsent(opts.userId);
   const scope = opts.scope || "user";
+  // Keep user and workspace partitions mutually exclusive. Missing workspace identity
+  // must not silently persist a client memory in the account-level (NULL) partition.
+  if ((scope === "workspace" && !opts.workspaceId) || (scope === "user" && !!opts.workspaceId)) return;
   if ((scope === "user" || scope === "workspace") && consent !== "full") return;
   await db().from("maaroof_memory").insert({
     user_id: opts.userId,
