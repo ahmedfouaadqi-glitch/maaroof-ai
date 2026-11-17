@@ -12,22 +12,22 @@ P0 broad audit and environment-file remediation were explicitly waived as prereq
 
 | Phase | Status | Evidence / remaining boundary |
 |---|---|---|
-| P0 | Waived for sequencing; not passed | Remaining audit scope not completed; .env risk remains open; Supabase excluded |
-| P1 | Partial | Automatic history pruning stopped; delete actions for tool results/history/workspaces blocked; template delete UI removed; no persistent archive/restore |
-| P2 | Partial | Balance tab and panel removed from daily workspace; owner identity and RLS not verified |
-| P3 | Partial | In-memory export bus scoped by active workspace; persisted records/templates/drafts and pagination not verified |
-| P4 | Partial | 24 tools, 18 options entries, 21 skills and 70/69 external registry verified; full endpoint schema and license review outstanding |
-| P5 | Partial | Layer/data-flow review documented; auth/RLS/persistence tracing excluded |
-| P6 | Partial | Excel worksheet-name sanitization and failed-step omission accounting fixed; no browser/round-trip export suite |
-| P7 | Foundation implemented | Versioned evidence-linked report contract and validation; no persistence/signing |
-| P8 | Foundation implemented | Workspace-bound branding schema and preview data; no persistent manager or renderer integration |
-| P9 | Foundation implemented | Executive export projection using existing ExportPayload; no preview/release UI |
-| P10 | Foundation implemented | Technical export projection with evidence traceability; no internal report UI/release integration |
-| P11 | Foundation implemented | Approval lifecycle state machine; no owner authorization or persisted events |
-| P12 | Foundation implemented | Server-only token hashing, expiry/revocation primitives; no persistence, share route or access logs |
-| P13 | Foundation implemented | Workspace-scoped filtering/version selectors; no persistent Reports Center UI |
-| P14 | In progress | Unit tests and TypeScript validation pass on the latest validation run; full repository lint has pre-existing-formatting debt; production build pending |
-| P15 | Handoff prepared | Work remains on isolated feature branch; no PR, merge, deployment or main change |
+| P0 | Waived for sequencing; **not passed** | Source-level risks R-06/07/08 fixed and R-13 clarified; .env risk remains open; Supabase and live tenant isolation excluded |
+| P1 | Partial | Automatic memory pruning stopped; tool-result, workspace, template and chat deletion paths blocked/hidden; persistent archive/restore not implemented |
+| P2 | Partial | Owner-mode UI hides balance and pricing surfaces; server identity/RLS and single-owner enforcement not verified |
+| P3 | Partial | Workspace identity propagated through direct-tool UI; MCI, knowledge, memory, Known, analysis, what-if, reports and history scope hardened; DB/RLS and all persisted tables unverified |
+| P4 | Partial | 24 tool keys, 18 option schemas, 21 skills, 70 package variants/69 names reviewed; route map added; full callback/contract and license audit outstanding |
+| P5 | Partial | Layer/data-flow evidence updated for MCI, knowledge, memory, jobs and reports; persisted auth/RLS paths excluded |
+| P6 | Partial | Export sanitization, omission accounting, complete task-event pagination and localized client HTML generator added; no browser/round-trip export suite |
+| P7 | Foundation implemented | Versioned report contract v2 with six axes and evidence-linked validation; no persistent report store |
+| P8 | Foundation implemented | White Label sanitation, workspace binding and settings/preview components; no persistent settings manager integration |
+| P9 | Foundation implemented | Eight-section client HTML report with AR/EN/KU labels, RTL/LTR and print support; not connected to a persistent release workflow |
+| P10 | Foundation implemented | Technical report projection and export payload; no internal report-center integration |
+| P11 | Foundation implemented | Approval lifecycle state machine and tests; no persisted approval events or owner authorization |
+| P12 | Foundation implemented | Random share token, hash-only storage primitive, expiry/revocation and workspace-bound grant; no persistent grant route/access log |
+| P13 | Foundation implemented | Reports Center, preview and White Label components exist; no persistent Reports Center data/API integration |
+| P14 | **Passed at validated checkpoint** | 146 test files / 745 tests passed / 3 skipped; TypeScript and production build passed. Full lint remains diagnostic/non-blocking and not clean |
+| P15 | Handoff prepared | Isolated feature branch only; no PR, merge, deployment or change to main |
 
 ## Protected constraints verified
 
@@ -42,14 +42,25 @@ P0 broad audit and environment-file remediation were explicitly waived as prereq
 
 ## Validation run
 
-Current validation run at the time of this document:
-- Run ID: `44057164020`
-- URL: https://github.com/ahmedfouaadqi-glitch/maaroof-ai/actions/runs/44057164020
-- Unit tests: passed.
-- TypeScript validation: pending in the live run.
-- Production build: pending in the live run.
-- Full repository ESLint: diagnostic only; not a passing gate.
+Validated implementation checkpoint:
+- Run ID: `44196303790`
+- URL: https://github.com/ahmedfouaadqi-glitch/maaroof-ai/actions/runs/44196303790
+- Commit: `32b05b7ff34a31ac31e866ee21d5441198fa1c5a`
+- Unit tests: **146 files passed; 745 tests passed; 3 skipped**.
+- TypeScript validation: passed.
+- Production build: passed.
+- Repository lint: non-blocking diagnostic; existing Prettier violations remain, so this is not a lint pass.
+
+Subsequent changes to documentation only update the handoff; the implementation checkpoint above is the last fully validated source checkpoint.
 
 ## Release posture
 
 This branch is an implementation and review handoff, not a production-ready release. Phases P1–P6 remain partial, and P7–P13 are domain foundations without persistent integration. Do not merge or deploy until the owner/workspace storage boundary, archive/restore, report persistence, approval authorization, secure sharing routes, report center UI, full export tests and final CI gates are completed.
+
+## Current implementation notes
+
+- Compared with the plan baseline `e0570879c5b4ca3f238f44e890df4b865da904ff`: no files deleted; the eleven protected files retain identical blob fingerprints.
+- No .env or secret contents were opened; no secret rotation or repository history rewrite performed.
+- No Supabase connection/query/schema/migration/RLS/data operation performed.
+- No paid operation, live model probe, external model execution or Cloudflare change performed.
+- No data rows were physically deleted; the destructive API/UI paths listed above are blocked or hidden.
