@@ -45,6 +45,12 @@ export function BrandBoostAgent({ workspaceId = null, workspace = null }: { work
   // Reset identity inputs at workspace boundaries. Never borrow the account profile for a client.
   useEffect(() => {
     if (workspaceId) {
+      if (!workspace || workspace.id !== workspaceId) {
+        setBrand("");
+        setKw("");
+        setWebsiteUrl("");
+        return;
+      }
       setBrand(String(workspace?.entity_truth_card?.entity_name || workspace?.name || ""));
       setKw(Array.isArray(workspace?.keywords) ? workspace.keywords.join(", ") : String(workspace?.keywords || workspace?.entity_truth_card?.keywords || ""));
       setWebsiteUrl(String(workspace?.brand_url || workspace?.entity_truth_card?.website_url || ""));
