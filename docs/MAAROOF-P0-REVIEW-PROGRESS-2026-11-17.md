@@ -85,3 +85,40 @@ These findings must be re-traced through their consumers and contracts before P1
 P0 remains **OPEN**. This batch adds verified CI evidence and additional static source findings, but it does not complete the required repository inventory, architecture/dependency map, full test-to-feature map, export validation, or risk review. The next P0 work is to continue the permitted non-Supabase source and test inventory, reconcile all prior partial reports, and produce the five acceptance artifacts: Repository Inventory, Architecture Map, Risk Register, Feature Matrix, and Protected Files Manifest.
 
 No P1 work may begin until the P0 acceptance gate is explicitly satisfied.
+
+## 7. Additional documentation, configuration, and export-test review
+
+### 7.1 Historical MCI documentation reconciliation
+- `docs/MCI_AUDIT.md` describes MCI as active in selected tools, with user-scoped reuse/cache and fail-open behavior. The current `src/lib/mci/index.ts` describes the MCI foundation as "not yet wired into tools". These statements may refer to different MCI generations or layers; the actual runtime wiring is not established by this pure-module batch. Reconcile against permitted call sites only; do not inspect Supabase-backed storage or protected engine files.
+- `docs/EXECUTION-MODES-PROOF.md` records a historical authenticated preview test (2026-09-22) showing recommendation/simulation modes produced zero tool calls. It is historical runtime evidence, not proof of current behavior at the reviewed commit.
+- `docs/SGEO-DEFINITION.md` aligns with the domain ontology: SGEO is a derived overlap index over SEO/AEO/GEO/SGE, separate from the existing GSEO axis and excluded from the weighted total to avoid double counting.
+- `docs/ai-visibility-probe-metrics.md` documents the same observed-sample limits and denominators found in the metric implementation. This documentation makes the implementation's treatment of status fields and requested engine sets worth validating against the exact intended input contract.
+
+### 7.2 Configuration
+- `.gitignore` does not contain an explicit `.env` ignore rule. The repository root listing exposes a tracked `.env` path, but its contents were not and must not be opened in this review. Treat as a **high-priority secret-exposure verification item**, not proof that a live credential is valid or exploitable. Any response must use a safe local secret-scanning/rotation procedure without copying values into logs, chat, or commits.
+- `tsconfig.json` enables `strict: true`, `noEmit: true`, and disables `noUnusedLocals` / `noUnusedParameters`. No typecheck command was run independently in this review.
+- The validation workflow runs frozen Bun install, Vitest unit tests, and production build on pushes to `main`, `fix/**`, `feat/**`, and pull requests. It has no explicit lint or standalone typecheck step in the reviewed workflow file.
+
+### 7.3 Export regression-test coverage
+- `export-format-templates.test.ts` covers CSV, Markdown, JSON, executive summary, and PowerPoint text splitting.
+- `export-content-translation.test.ts` covers protected machine-readable sections, URLs, chunk bounds, and path-based translation.
+- `export-pdf-popup.test.ts` covers the pre-opened popup path.
+- `export-direction.test.ts` covers basic RTL/LTR selection.
+- The reviewed tests do not establish browser-level PDF print fidelity, DOCX/PPTX openability, XLSX worksheet-name edge cases, six-sheet layout validity, very large payload behavior, or historical event pagination. Those remain explicit validation gaps.
+- The normal XLSX worksheet-name sanitizer exists in the standard workbook branch; the six-sheet branch is a separate code path and does not visibly apply that sanitizer before `addWorksheet`. Reclassify the earlier candidate as a path-specific issue requiring a regression test, not as a confirmed runtime failure.
+
+## 8. Updated P0 position
+P0 remains **OPEN**. The review has now added:
+- Verified CI result for the exact baseline commit.
+- Static findings across MCI, pure execution/evidence modules, metric calculators, export utilities, tests, docs and top-level configuration.
+- Explicit separation of verified evidence, static observations, candidate defects, and excluded service/database boundaries.
+
+Still outstanding:
+1. Complete the non-Supabase source inventory and dependency map.
+2. Reconcile the historical MCI wiring claims against current permitted call sites.
+3. Complete the export consumer/lifecycle review and determine whether the session-global export bus can mix workspaces in actual UI usage.
+4. Trace non-Supabase deletion/archive paths and tool-history retention logic without crossing the excluded data-service boundary.
+5. Complete route/component/test-to-feature matrices to the extent possible under the Supabase exclusion.
+6. Finalize the five P0 artifacts and mark every excluded or unverified area explicitly.
+
+No application code, configuration, credentials, database, deployment, or main-branch content was changed.
