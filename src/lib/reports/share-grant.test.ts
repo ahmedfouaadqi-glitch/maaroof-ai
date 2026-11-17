@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createShareGrant, matchesShareToken, shareGrantStatus } from "./share-grant.server";
 
 const input = {
-  grantId: "grant-1", reportId: "report-1", reportVersion: 2, reportKind: "client" as const,
+  grantId: "grant-1", reportId: "report-1", workspaceId: "workspace-1", reportVersion: 2, reportKind: "client" as const,
   allowedFormats: ["pdf", "pptx"], createdAt: "2026-11-17T10:00:00Z", expiresAt: "2026-11-18T10:00:00Z",
 };
 
@@ -19,6 +19,10 @@ describe("secure share grant primitives", () => {
   it("blocks technical report sharing unless explicitly allowed", () => {
     expect(() => createShareGrant({ ...input, reportKind: "technical" })).toThrow("technical_report_sharing_forbidden");
     expect(() => createShareGrant({ ...input, reportKind: "technical", allowTechnicalClientShare: true })).not.toThrow();
+  });
+
+  it("requires workspace and report scope", () => {
+    expect(() => createShareGrant({ ...input, workspaceId: "" })).toThrow("share_scope_required");
   });
 
   it("rejects invalid expiry and formats", () => {
