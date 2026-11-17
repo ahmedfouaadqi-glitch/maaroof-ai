@@ -135,7 +135,7 @@ export function FeasibilityStudy({ workspaceId = null, workspace = null }: { wor
       </div>
       <p className="mb-4 text-sm text-muted-foreground">{t("feas_desc")}</p>
       <ToolHelpBanner toolKey="feasibility" />
-      <div className="mt-3"><GeoScopeSelector compact toolKey="feasibility" /></div>
+      {!workspaceId && <div className="mt-3"><GeoScopeSelector compact toolKey="feasibility" /></div>}
 
       <div className="grid gap-3 md:grid-cols-2">
         <Field label={t("feas_f_name")} value={form.project_name} onChange={upd("project_name")} />
