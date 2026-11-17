@@ -33,18 +33,27 @@ export function BrandBoostAgent({ workspaceId = null, workspace = null }: { work
   const [outLang, setOutLang] = useState<Lang>(lang);
   const { user, profile } = useAuth();
   const [jobs, setJobs] = useState<any[]>([]);
-  const [brand, setBrand] = useState(String(workspace?.entity_truth_card?.entity_name || workspace?.name || (profile as any)?.brand_name || ""));
-  const [kw, setKw] = useState(Array.isArray(workspace?.keywords) ? workspace.keywords.join(", ") : String(workspace?.keywords || workspace?.entity_truth_card?.keywords || (profile as any)?.brand_keywords || ""));
-  const [websiteUrl, setWebsiteUrl] = useState(String(workspace?.brand_url || (profile as any)?.website_url || (profile as any)?.website || ""));
-  // Fill once from the saved profile when it arrives; never overwrite what the user typed.
+  const [brand, setBrand] = useState(String(workspaceId
+    ? workspace?.entity_truth_card?.entity_name || workspace?.name || ""
+    : (profile as any)?.brand_name || ""));
+  const [kw, setKw] = useState(workspaceId
+    ? (Array.isArray(workspace?.keywords) ? workspace.keywords.join(", ") : String(workspace?.keywords || workspace?.entity_truth_card?.keywords || ""))
+    : String((profile as any)?.brand_keywords || ""));
+  const [websiteUrl, setWebsiteUrl] = useState(String(workspaceId
+    ? workspace?.brand_url || workspace?.entity_truth_card?.website_url || ""
+    : (profile as any)?.website_url || (profile as any)?.website || ""));
+  // Reset identity inputs at workspace boundaries. Never borrow the account profile for a client.
   useEffect(() => {
-    const pb = (profile as any)?.brand_name;
-    const pk = (profile as any)?.brand_keywords;
-    const pw = (profile as any)?.website_url || (profile as any)?.website;
-    if (pb) setBrand((cur: string) => cur || pb);
-    if (pk) setKw((cur: string) => cur || pk);
-    if (pw) setWebsiteUrl((cur: string) => cur || pw);
-  }, [(profile as any)?.brand_name, (profile as any)?.brand_keywords, (profile as any)?.website_url, (profile as any)?.website]);
+    if (workspaceId) {
+      setBrand(String(workspace?.entity_truth_card?.entity_name || workspace?.name || ""));
+      setKw(Array.isArray(workspace?.keywords) ? workspace.keywords.join(", ") : String(workspace?.keywords || workspace?.entity_truth_card?.keywords || ""));
+      setWebsiteUrl(String(workspace?.brand_url || workspace?.entity_truth_card?.website_url || ""));
+      return;
+    }
+    setBrand(String((profile as any)?.brand_name || ""));
+    setKw(String((profile as any)?.brand_keywords || ""));
+    setWebsiteUrl(String((profile as any)?.website_url || (profile as any)?.website || ""));
+  }, [workspaceId, workspace, (profile as any)?.brand_name, (profile as any)?.brand_keywords, (profile as any)?.website_url, (profile as any)?.website]);
   const [freq, setFreq] = useState<"daily" | "weekly" | "monthly">("weekly");
   const [sel, setSel] = useState<string[]>(PLATFORMS.slice(0, MAX_PLATFORMS_PER_RUN));
   const [approved, setApproved] = useState(false);
@@ -113,7 +122,19 @@ export function BrandBoostAgent({ workspaceId = null, workspace = null }: { work
       if (session?.access_token) headers.Authorization = "Bearer " + session.access_token;
       const res = await apiFetch("/api/brand-boost", {
         method: "POST", headers,
-        body: JSON.stringify({ brand_name: j.brand_name, brand_keywords: j.brand_keywords, website_url: String((j.config as any)?.website_url || websiteUrl || "").trim(), platforms: (j.platforms || []).slice(0, MAX_PLATFORMS_PER_RUN), lang: outLang, scope: getEffectiveScope(profile, "brand"), workspace_id: workspaceId }),
+        body: JSON.stringify({
+          brand_name: j.brand_name, brand_keywords: j.brand_keywords,
+          website_url: String((j.config as any)?.website_url || websiteUrl || "").trim(),
+          platforms: (j.platforms || []).slice(0, MAX_PLATFORMS_PER_RUN), lang: outLang,
+          scope: workspaceId
+            ? (() => {
+                const card = workspace?.entity_truth_card && typeof workspace.entity_truth_card === "object" ? workspace.entity_truth_card : {};
+                const country = String(workspace?.country || card.country || card.country_name || card.hq_country || "").trim();
+                return country ? { scope: "country", country } : { scope: "world" };
+              })()
+            : getEffectiveScope(profile, "brand"),
+          workspace_id: workspaceId
+        }),
       });
       const text = await res.text();
       let data: any = {};
