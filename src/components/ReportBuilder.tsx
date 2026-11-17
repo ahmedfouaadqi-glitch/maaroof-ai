@@ -132,23 +132,23 @@ export function ReportBuilder() {
   }
 
   async function loadTemplates() {
-    if (!user || activeWorkspaceId === undefined) {
+    if (!user || activeWorkspaceId === undefined || activeWorkspaceId !== null) {
+      // report_templates has no verified workspace_id field in the typed source contract.
+      // Keep these account-level templates out of client workspaces until persistence is scoped.
       setTemplates([]);
       return;
     }
-    setTemplates([]);
-    let query = supabase.from("report_templates").select("*").eq("user_id", user.id);
-    query = activeWorkspaceId ? query.eq("workspace_id", activeWorkspaceId) : query.is("workspace_id", null);
     const requestedWorkspaceId = activeWorkspaceId;
-    const { data: rows, error } = await query.order("updated_at", { ascending: false });
+    const { data: rows, error } = await supabase.from("report_templates").select("*")
+      .eq("user_id", user.id).order("updated_at", { ascending: false });
     if (activeWorkspaceRef.current === requestedWorkspaceId) setTemplates(error ? [] : rows || []);
   }
 
   useEffect(() => { loadData(); loadTemplates(); /* eslint-disable-next-line */ }, [user?.id, activeWorkspaceId]);
 
   async function saveTemplate() {
-    if (!user || activeWorkspaceId === undefined || !tplName.trim()) return;
-    await supabase.from("report_templates").insert({ user_id: user.id, ...(activeWorkspaceId ? { workspace_id: activeWorkspaceId } : {}), name: tplName.trim(), config: { selected, days, chart, title } });
+    if (!user || activeWorkspaceId !== null || !tplName.trim()) return;
+    await supabase.from("report_templates").insert({ user_id: user.id, name: tplName.trim(), config: { selected, days, chart, title } });
     setTplName("");
     loadTemplates();
   }
