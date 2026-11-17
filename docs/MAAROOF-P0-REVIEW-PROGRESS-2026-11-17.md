@@ -211,3 +211,13 @@ The eleven protected files were re-enumerated by blob SHA only. Their current fi
 | `src/lib/maaroof/tool-council-fallback.test.ts` | `cf588f98e8d397ebf47a9447cd8853dd008d85e2` |
 
 These are current branch fingerprints, not a claim of historical immutability unless compared to the previously archived manifest. Protected contents remain unopened and untouched.
+
+## 13. P0 artifact set created on the development branch
+
+The following audit artifacts have now been added as documentation-only commits:
+- `docs/MAAROOF-P0-ARCHITECTURE-MAP-2026-11-17.md` — evidence-bounded architecture map.
+- `docs/MAAROOF-P0-RISK-REGISTER-2026-11-17.md` — working risk register with evidence classes and dispositions.
+- `docs/MAAROOF-P0-REPOSITORY-INVENTORY-2026-11-17.md` — tree-level inventory and reviewed/unreviewed scope.
+- `docs/MAAROOF-P0-REVIEW-PROGRESS-2026-11-17.md` — cumulative evidence log.
+
+These artifacts are intentionally labelled PARTIAL/DRAFT. They do not claim P0 acceptance. The feature matrix and test-to-feature mapping remain to be completed and reconciled with prior partial reports.
