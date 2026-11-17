@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const REPORT_SCHEMA_VERSION = "2.0.0" as const;
-const safeHttpUrl = z.string().url().refine((value) => /^https?:\\/\\//i.test(value), "http_url_required");
+const safeHttpUrl = z.string().url().refine((value) => /^https?:\/\//i.test(value), "http_url_required");
 const score = z.object({ score: z.number().min(0).max(100).nullable(), status: z.string().min(1), reason: z.string().optional() });
 export const SixAxesScoresSchema = z.object({
   seo: score,
