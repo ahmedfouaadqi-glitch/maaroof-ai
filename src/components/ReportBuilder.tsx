@@ -143,7 +143,7 @@ export function ReportBuilder() {
   useEffect(() => { loadData(); loadTemplates(); /* eslint-disable-next-line */ }, [user?.id, activeWorkspaceId]);
 
   async function saveTemplate() {
-    if (!user || !tplName.trim()) return;
+    if (!user || activeWorkspaceId === undefined || !tplName.trim()) return;
     await supabase.from("report_templates").insert({ user_id: user.id, ...(activeWorkspaceId ? { workspace_id: activeWorkspaceId } : {}), name: tplName.trim(), config: { selected, days, chart, title } });
     setTplName("");
     loadTemplates();
