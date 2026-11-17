@@ -73,9 +73,10 @@ export function buildExecutionEvidencePack(
   ];
   let included = 0;
   let omitted = 0;
+  const limitationsReserve = failed.length ? 160 : 0;
   for (const item of unique.slice(0, maxItems)) {
     const section = "## Tool result: " + item.tool + "\nStatus: succeeded\nPayload:\n" + compact(item.output, perItemChars) + "\n";
-    if (lines.join("\n").length + section.length > maxChars) { omitted++; continue; }
+    if (lines.join("\n").length + section.length + limitationsReserve > maxChars) { omitted++; continue; }
     lines.push(section);
     included++;
   }
