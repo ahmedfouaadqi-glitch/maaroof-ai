@@ -8,15 +8,35 @@ const CLAIM_WEIGHT: Record<KnowledgeClaimType, number> = {
   hypothesis: 0.4, temporary_observation: 0.35, opinion: 0.2,
 };
 
+type ValidItem = { item: ContextItem; tokens: number; reliability: number };
+
 export function selectContext(items: ContextItem[], stage: CognitiveStage, budget: number, log = new ProvenanceLog()) {
-  const ranked = [...items].sort((a, b) =>
-    (CLAIM_WEIGHT[b.claimType] + (b.reliability ?? 0)) - (CLAIM_WEIGHT[a.claimType] + (a.reliability ?? 0)));
+  const valid: ValidItem[] = [];
+  for (const item of items) {
+    const reliability = item.reliability === undefined ? 0 : item.reliability;
+    if (typeof reliability !== "number" || !Number.isFinite(reliability) || reliability < 0 || reliability > 1) {
+      log.record(item, stage, false, "invalid_reliability");
+      continue;
+    }
+    const tokens = item.tokens === undefined ? estimateTokens(item.content) : item.tokens;
+    if (typeof tokens !== "number" || !Number.isSafeInteger(tokens) || tokens < 0) {
+      log.record(item, stage, false, "invalid_token_count");
+      continue;
+    }
+    valid.push({ item, tokens, reliability });
+  }
+
+  const ranked = valid.sort((a, b) =>
+    (CLAIM_WEIGHT[b.item.claimType] + b.reliability) - (CLAIM_WEIGHT[a.item.claimType] + a.reliability));
+  const safeBudget = Number.isFinite(budget) ? Math.max(0, Math.floor(budget)) : 0;
   const selected: ContextItem[] = [];
   let used = 0;
-  for (const it of ranked) {
-    const t = it.tokens ?? estimateTokens(it.content);
-    if (used + t <= budget) { selected.push(it); used += t; log.record(it, stage, true, "fits_budget"); }
-    else log.record(it, stage, false, "over_budget");
+  for (const entry of ranked) {
+    if (used + entry.tokens <= safeBudget) {
+      selected.push(entry.item);
+      used += entry.tokens;
+      log.record(entry.item, stage, true, "fits_budget");
+    } else log.record(entry.item, stage, false, "over_budget");
   }
-  return { selected, usedTokens: used, budget, provenance: log };
+  return { selected, usedTokens: used, budget: safeBudget, provenance: log };
 }
