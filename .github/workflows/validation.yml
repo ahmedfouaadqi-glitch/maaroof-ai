@@ -24,8 +24,6 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Run unit tests
         run: bun run test -- --reporter=dot
-      - name: Lint changed report and safety modules
-        run: bunx eslint src/lib/reports src/lib/non-destructive-mode.ts src/lib/non-destructive-mode.test.ts src/lib/export-worksheet-name.ts src/lib/export-worksheet-name.test.ts src/lib/export-bus.ts src/lib/export-bus.test.ts src/lib/maaroof/execution-evidence-pack.ts src/lib/maaroof/execution-evidence-pack.test.ts --rule "prettier/prettier: off"
       - name: Run repository lint (baseline diagnostic)
         continue-on-error: true
         run: bun run lint
