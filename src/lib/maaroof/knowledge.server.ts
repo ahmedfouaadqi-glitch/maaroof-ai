@@ -96,7 +96,8 @@ export type UpsertNodeInput = {
 export async function upsertKnowledgeNode(input: UpsertNodeInput, freshnessDays = 30): Promise<string | null> {
   try {
     const scope = input.scope || (input.userId ? "user" : "platform");
-    if (scope === "workspace" && (!input.userId || !input.workspaceId)) return null;
+    if (scope === "workspace" && !input.workspaceId) return null;
+    if (scope === "user" && (!input.userId || !!input.workspaceId)) return null;
     let q = db()
       .from("knowledge_nodes")
       .select("id, version, confidence, reliability, usage_count")
