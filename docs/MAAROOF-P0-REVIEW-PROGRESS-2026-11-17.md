@@ -185,3 +185,29 @@ The approved project constraint is to preserve customer data, history and report
 7. Reconfirm the eleven protected file blob SHAs before any future code-writing phase.
 
 P0 remains **OPEN**. No application code, database, auth configuration, secrets, or deployment were changed in this batch.
+
+## 12. Repository-tree metadata and protected-file fingerprint checkpoint
+
+A recursive Git tree was retrieved at current branch head `eae28f38718f64520c6218ec5160b55df901f9bf`. The tree response was complete (`truncated=false`). This was metadata-only; no protected file contents were opened.
+
+Current source-tree counts:
+- `src/routes/**`: **66 files**.
+- `src/components/**`: **205 files**.
+- `src/lib/**`: **364 files**.
+
+The eleven protected files were re-enumerated by blob SHA only. Their current fingerprints are:
+| Protected path | Current blob SHA |
+|---|---|
+| `src/lib/ai-engines.ts` | `f6897e7d3433d9330fa9a5e55e6ae368418094c8` |
+| `src/lib/ai-engines.server.ts` | `2fcf077f8b229cd6a668acb1b95785534784f82a` |
+| `src/lib/maaroof/tool-council.ts` | `4b1f80d59ac3ed1f252f58b5904133b454dfa1e7` |
+| `src/lib/maaroof/tool-council.server.ts` | `cf4448710a2e4c6dd20752c8e03eb53e1430275e` |
+| `src/lib/maaroof/probe-answer.ts` | `d06107fe2bc654af1a26c52dbfb33c6537690813` |
+| `src/lib/__tests__/ai-engines-catalog.test.ts` | `d89f1804e9bb23c387fab2920ec1d63709278796` |
+| `src/lib/__tests__/council-engines.test.ts` | `7d549bd387a02065952d4b53ebd6b111c926d0ab` |
+| `src/lib/__tests__/ten-model-probe.test.ts` | `76b1a94cb209501459d3e96110b9a5c9532194d9` |
+| `src/lib/maaroof/probe-answer.test.ts` | `62048558972c11431a85b5fa2a3640fbafd30d99` |
+| `src/lib/maaroof/tool-council.test.ts` | `e6b39d11a7dd087d813a6cc032ba1aab694de3bb` |
+| `src/lib/maaroof/tool-council-fallback.test.ts` | `cf588f98e8d397ebf47a9447cd8853dd008d85e2` |
+
+These are current branch fingerprints, not a claim of historical immutability unless compared to the previously archived manifest. Protected contents remain unopened and untouched.
