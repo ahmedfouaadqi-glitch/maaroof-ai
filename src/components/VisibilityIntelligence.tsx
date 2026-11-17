@@ -79,7 +79,7 @@ export function VisibilityIntelligence({ workspaceId = null, workspace = null, i
         card.hq_country,
       ].find((value) => typeof value === "string" && value.trim());
       const country = String(rawCountry || "").trim();
-      const isGlobal = /\\b(global|world|worldwide)\\b|عالمي|العالم/i.test(country);
+      const isGlobal = /\b(global|world|worldwide)\b|عالمي|العالم/i.test(country);
       setScope(!country || isGlobal ? { scope: "world" } : { scope: "country", country });
       return;
     }
