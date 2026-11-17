@@ -6,7 +6,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { descendantIds } from "@/lib/space-structure";
 import { blockDestructiveOperation } from "@/lib/non-destructive-mode";
 
 const WorkspaceKind = z.enum(["own", "client", "brand"]);
