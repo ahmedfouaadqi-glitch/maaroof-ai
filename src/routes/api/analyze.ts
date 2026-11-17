@@ -102,7 +102,12 @@ export const Route = createFileRoute("/api/analyze")({
             userId = data.user?.id || null;
           }
           if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
-          { const _wg = await (await import("@/lib/workspace-guard.server")).workspaceGuard(admin, userId, body); if (_wg) return _wg; }
+          { const _guard = await import("@/lib/workspace-guard.server"); const _wg = await _guard.workspaceGuard(admin, userId, body); if (_wg) return _wg; }
+          const workspaceId = (await import("@/lib/workspace-guard.server")).pickWorkspaceId(body);
+          if (workspaceId) {
+            const { error: scopeError } = await admin.from("analyses").select("id, workspace_id").eq("user_id", userId).limit(1);
+            if (scopeError) return Response.json({ error: "workspace_analysis_scope_unavailable" }, { status: 503 });
+          }
           const runId = crypto.randomUUID();
           // Governed model selection (Part 12 registry) with the legacy default as fallback.
           const _MODEL = await resolveToolModel("google/gemini-2.5-flash-lite");
@@ -223,7 +228,8 @@ export const Route = createFileRoute("/api/analyze")({
           }
 
           await admin.from("analyses").insert({
-            user_id: userId, input_text: text.slice(0, 4000), input_hash: hash,
+            user_id: userId, ...(workspaceId ? { workspace_id: workspaceId } : {}),
+            input_text: text.slice(0, 4000), input_hash: hash,
             lang, score: result.score, authority: result.authority, local_relevance: result.local, citation: result.citation, cached: fromCache,
           });
           const { data: cur } = await admin.from("profiles").select("monthly_analyses_used").eq("id", userId).single();
