@@ -10,7 +10,7 @@
 1. `CapturedResult` now records its `workspaceId`.
 2. The export bus key is composed from workspace identity and tool key, so the same tool can retain distinct in-memory results in separate workspaces.
 3. `listCapturedResults` and `useCapturedResults` return only the requested workspace scope. The null scope represents the main account.
-4. `useActiveWorkspaceId` reads the existing `maaroof.active_workspace_id` selection in the browser and listens for the existing `maaroof:workspace-changed` event.
+4. `useActiveWorkspaceId` reads the existing `maaroof.active_workspace_id` selection in the browser and listens for the existing `maaroof:workspace-changed` event. Capture waits until this scope is resolved, preventing the first render from accidentally registering a client result in the main-account scope.
 5. `ToolResultExport` captures results under the active workspace.
 6. `ReportBuilder` filters its in-memory captured results to the active workspace.
 7. Added `src/lib/export-bus.test.ts` covering main-vs-client separation, client-vs-client separation, and stable keys.
