@@ -38,15 +38,15 @@ export function VisibilityIntelligence({ workspaceId = null, workspace = null, i
   const { t, lang: uiLang } = useI18n();
   const auth = useAuth();
   const pre = workspace ? workspacePrefill(workspace) : null;
-  const [brand, setBrand] = useState(pre?.brand || (workspace ? "" : String((auth.profile as any)?.brand_name || "")));
+  const [brand, setBrand] = useState(pre?.brand || (workspaceId ? "" : String((auth.profile as any)?.brand_name || "")));
   const [officialWebsite, setOfficialWebsite] = useState(pre?.site || "");
-  const [keywords, setKeywords] = useState(pre?.keywords || (workspace ? "" : String((auth.profile as any)?.brand_keywords || "")));
+  const [keywords, setKeywords] = useState(pre?.keywords || (workspaceId ? "" : String((auth.profile as any)?.brand_keywords || "")));
   const [discovery, setDiscovery] = useState<DiscoveryItem[] | null>(null);
   const [discovering, setDiscovering] = useState(false);
   const [discoveryError, setDiscoveryError] = useState("");
   const [historyTick, setHistoryTick] = useState(0);
   const [audienceLanguage, setAudienceLanguage] = useState<Lang>(uiLang);
-  const [scope, setScope] = useState<GeoScope>(() => getEffectiveScope(auth.profile, "research"));
+  const [scope, setScope] = useState<GeoScope>(() => workspaceId ? { scope: "world" } : getEffectiveScope(auth.profile, "research"));
   const [view, setView] = useState<View>(initialView);
   const [aiResult, setAiResult] = useState<any>(null);
   const [socialResult, setSocialResult] = useState<any>(null);
