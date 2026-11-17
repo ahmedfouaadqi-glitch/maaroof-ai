@@ -134,7 +134,7 @@ export function ReportBuilder() {
 
   async function saveTemplate() {
     if (!user || !tplName.trim()) return;
-    await supabase.from("report_templates").insert({ user_id: user.id, workspace_id: activeWorkspaceId, name: tplName.trim(), config: { selected, days, chart, title } });
+    await supabase.from("report_templates").insert({ user_id: user.id, ...(activeWorkspaceId ? { workspace_id: activeWorkspaceId } : {}), name: tplName.trim(), config: { selected, days, chart, title } });
     setTplName("");
     loadTemplates();
   }
