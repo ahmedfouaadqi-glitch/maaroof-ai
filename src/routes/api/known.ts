@@ -211,7 +211,7 @@ export const Route = createFileRoute("/api/known")({
 
         const m = describeMarket(scope as any);
         const { data: run, error: runInsertError } = await admin.from("mkd_runs").insert({
-          user_id: userId, workspace_id: workspaceId, brand, depth, scope: (scope || {}) as any, status: "running", cost_tokens: (chg as any).tokens || 0,
+          user_id: userId, ...(workspaceId ? { workspace_id: workspaceId } : {}), brand, depth, scope: (scope || {}) as any, status: "running", cost_tokens: (chg as any).tokens || 0,
         }).select("id").single();
         if (runInsertError) console.error("[known] run persistence failed", runInsertError.message);
         const dbRunId = (run as any)?.id as string | undefined;
