@@ -4,6 +4,7 @@ export type ShareReportKind = "client" | "technical";
 export type ShareGrant = {
   grantId: string;
   reportId: string;
+  workspaceId: string;
   reportVersion: number;
   reportKind: ShareReportKind;
   tokenHash: string;
@@ -16,6 +17,7 @@ export type ShareGrant = {
 export type NewShareGrantInput = {
   grantId: string;
   reportId: string;
+  workspaceId: string;
   reportVersion: number;
   reportKind: ShareReportKind;
   allowedFormats: string[];
@@ -29,6 +31,7 @@ export function hashShareToken(token: string): string {
 }
 
 export function createShareGrant(input: NewShareGrantInput): { token: string; grant: ShareGrant } {
+  if (!input.workspaceId.trim() || !input.reportId.trim()) throw new Error("share_scope_required");
   if (input.reportKind === "technical" && input.allowTechnicalClientShare !== true) {
     throw new Error("technical_report_sharing_forbidden");
   }
@@ -46,6 +49,7 @@ export function createShareGrant(input: NewShareGrantInput): { token: string; gr
     grant: {
       grantId: input.grantId,
       reportId: input.reportId,
+      workspaceId: input.workspaceId,
       reportVersion: input.reportVersion,
       reportKind: input.reportKind,
       tokenHash: hashShareToken(token),
