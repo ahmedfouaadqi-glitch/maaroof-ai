@@ -2,7 +2,7 @@ export type JobPageWindow = { page: number; pageSize: number; from: number; to: 
 
 export function jobPageWindow(pageRaw: unknown, pageSizeRaw: unknown): JobPageWindow {
   const pageValue = Number(pageRaw);
-  const sizeValue = Number(pageSizeRaw);
+  const sizeValue = pageSizeRaw == null || pageSizeRaw === "" ? 1000 : Number(pageSizeRaw);
   const page = Number.isFinite(pageValue) ? Math.max(0, Math.floor(pageValue)) : 0;
   const pageSize = Number.isFinite(sizeValue) ? Math.max(1, Math.min(1000, Math.floor(sizeValue))) : 1000;
   const from = page * pageSize;
