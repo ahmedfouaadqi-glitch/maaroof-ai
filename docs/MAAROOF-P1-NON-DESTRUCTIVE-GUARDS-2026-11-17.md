@@ -51,3 +51,13 @@ Outstanding:
 - Persistent archive/restore implementation and tests.
 - Verification of persisted owner/workspace isolation and cascade behavior is explicitly excluded by the current instruction not to inspect Supabase.
 - Production build result for the latest commit was pending at document creation.
+
+## تنفيذ إضافي بعد مراجعة المسارات — 2026-11-17
+
+- أزيل التقليم التلقائي من `maaroof_memory` عند تجاوز 1,000 سجل؛ إضافة ذاكرة جديدة لم تعد تحذف السجلات الأقدم.
+- أُوقف الحذف الدائم للمحادثات في `/api/maaroof-chat` بإرجاع `409 non_destructive_mode`، وأزيلت أزرار الحذف من `Dardasha` و`MaaroofChat`.
+- مسارا حذف نتيجة الأداة ومساحة العمل يظلان محميين بواسطة `blockDestructiveOperation`.
+- حذف سجل `visibility_trial_attempts` الذي رُصد في المراجعة محصور في إلغاء حجز مؤقت بحالة `reserved` عند فشل بدء المحاولة؛ لا يحذف محاولة مكتملة أو تاريخ نتائج.
+- أُبقيت عملية إزالة ملف مرفوع حديثاً عند فشل إنشاء سجل المرفق بوصفها معالجة لملف يتيم جديد، لا حذفاً لتاريخ المستخدم.
+
+**الحالة: جزئية.** لم يثبت بعد خلو جميع المستودع من كل مسار حذف، كما لم تُنفذ أرشفة/استعادة دائمة؛ يتطلب ذلك عقد تخزين وسياسة صلاحيات غير متحققين ضمن قيد عدم الاتصال بـ Supabase.
