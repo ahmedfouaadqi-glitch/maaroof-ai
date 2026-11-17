@@ -85,7 +85,7 @@ export function SmartResearch({ workspaceId = null, workspace = null }: { worksp
       </h2>
       <p className="mt-1 text-xs text-muted-foreground">{t("research_desc")}</p>
       <ToolHelpBanner toolKey="research" />
-      <div className="mt-3"><GeoScopeSelector compact toolKey="research" /></div>
+      {!workspaceId && <div className="mt-3"><GeoScopeSelector compact toolKey="research" /></div>}
       {specialty && (
         <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[11px] text-primary">
           <Sparkles className="size-3" /> {t("specialty_active")}: <b>{specialty}</b>
