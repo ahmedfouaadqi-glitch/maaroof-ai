@@ -221,3 +221,24 @@ The following audit artifacts have now been added as documentation-only commits:
 - `docs/MAAROOF-P0-REVIEW-PROGRESS-2026-11-17.md` — cumulative evidence log.
 
 These artifacts are intentionally labelled PARTIAL/DRAFT. They do not claim P0 acceptance. The feature matrix and test-to-feature mapping remain to be completed and reconciled with prior partial reports.
+
+
+## 14. Current branch verification after P0 artifact commits
+
+- Current branch head: `b7ffb04a01cc488a2adf32aa93deb45bcc5c7497`.
+- Comparison with baseline `e0570879c5b4ca3f238f44e890df4b865da904ff`: `ahead_by=11`, `behind_by=0`.
+- The comparison reports exactly six added files, all under `docs/MAAROOF-P0-*`; no application source files are changed relative to the baseline.
+- The six P0 documents are: architecture map, feature matrix, repository inventory, review progress, risk register, and test-to-feature map.
+- The recursive tree is complete (`truncated=false`).
+- All eleven protected file blob SHAs match the baseline manifest values recorded in plan v1.3: **11/11 unchanged**. This is metadata comparison only; protected contents remain unopened.
+- No workflow run was returned for this documentation-only head at the time of this check. The previously verified CI run remains tied to the baseline commit; do not claim fresh CI on the current head.
+
+## 15. Current acceptance assessment
+P0 deliverables now exist as six documented artifacts, but the evidence remains partial. The main blockers are:
+1. The user-excluded Supabase/auth/data-service boundaries prevent verification of persisted owner/workspace isolation, retention, deletion, RLS and report scoping.
+2. The 66 route, 205 component and 364 library files have not all received semantic review.
+3. Full dependency and test-to-feature mapping remains incomplete.
+4. Runtime export validation and end-to-end flows have not been executed.
+5. The tracked `.env` path requires safe secret-exposure verification without opening or displaying its contents.
+
+**Decision: P0 remains OPEN. P1 is not started.**
