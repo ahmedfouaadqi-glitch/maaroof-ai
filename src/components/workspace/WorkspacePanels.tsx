@@ -31,21 +31,43 @@ export type PastJob = { id: string; goal: string; mode: string; status: string; 
 export function HistoryPanel({ lang, workspaceId, onOpen, onContinue }: { lang: L; workspaceId: string | null; onOpen: (j: PastJob) => void; onContinue: (j: PastJob) => void }) {
   const [jobs, setJobs] = useState<PastJob[] | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [nextPage, setNextPage] = useState<number | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   useEffect(() => {
     let active = true;
     setJobs(null);
+    setNextPage(null);
     setLoadError(false);
     (async () => {
       const t = await token();
-      const query = new URLSearchParams({ workspace_id: workspaceId ?? "" });
+      const query = new URLSearchParams({ workspace_id: workspaceId ?? "", page: "0", page_size: "100" });
       const r = await fetch("/api/maaroof-jobs?" + query.toString(), { headers: { Authorization: "Bearer " + t }, cache: "no-store" });
       const b = r.ok ? await r.json() : { jobs: [] };
       if (!active) return;
       setLoadError(!r.ok || b?.degraded === true);
       setJobs(Array.isArray(b.jobs) ? b.jobs : []);
+      setNextPage(Number.isInteger(b?.next_page) ? b.next_page : null);
     })().catch(() => { if (active) { setJobs([]); setLoadError(true); } });
     return () => { active = false; };
   }, [workspaceId]);
+
+  async function loadMore() {
+    if (nextPage == null || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const t = await token();
+      const query = new URLSearchParams({ workspace_id: workspaceId ?? "", page: String(nextPage), page_size: "100" });
+      const r = await fetch("/api/maaroof-jobs?" + query.toString(), { headers: { Authorization: "Bearer " + t }, cache: "no-store" });
+      if (!r.ok) throw new Error("jobs_page_unavailable");
+      const b = await r.json();
+      setJobs((current) => [...(current || []), ...(Array.isArray(b.jobs) ? b.jobs : [])]);
+      setNextPage(Number.isInteger(b?.next_page) ? b.next_page : null);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   const buildExport = (j: PastJob) => async () => {
     const t = await token();
@@ -84,6 +106,7 @@ export function HistoryPanel({ lang, workspaceId, onOpen, onContinue }: { lang: 
           })}
         </ul>
       )}
+      {nextPage != null && <div className="mt-4 flex justify-center"><button type="button" disabled={loadingMore} onClick={() => void loadMore()} className="rounded-full border border-border px-4 py-2 text-xs font-semibold disabled:opacity-50">{loadingMore ? tr(lang, "جارٍ التحميل…", "Loading…", "بارکردن…") : tr(lang, "تحميل مهام أقدم", "Load older tasks", "ئەرکە کۆنەکان باربکە")}</button></div>}
     </section>
   );
 }
