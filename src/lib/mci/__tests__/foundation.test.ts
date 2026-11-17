@@ -17,6 +17,7 @@ describe("MCI foundation", () => {
     expect(computeContextBudget({ stage: "understanding" })).toBe(1200);
     expect(computeContextBudget({ stage: "reality", complexity: "high", risk: "high" })).toBeGreaterThan(2000);
     expect(computeContextBudget({ stage: "reality", modelContextWindow: 2000 })).toBe(500);
+    expect(computeContextBudget({ stage: "reality", modelContextWindow: 500 })).toBe(125);
   });
   it("freshness gate", () => {
     const old = new Date(Date.now() - 48 * 3600_000);
@@ -24,6 +25,7 @@ describe("MCI foundation", () => {
     expect(passesFreshness(old, "competitive")).toBe(true);
     expect(requiresLiveData("ما أسعار اليوم")).toBe(true);
     expect(passesFreshness(new Date(), "structural", "latest news")).toBe(false);
+    expect(passesFreshness(new Date(Date.now() + 3600_000), "competitive")).toBe(false);
   });
   it("evidence gate and failure strategy", () => {
     const base = { id: "1", source: "evidence" as const, content: "x", createdAt: "" };
@@ -38,5 +40,18 @@ describe("MCI foundation", () => {
     const r = selectContext([mk("o", "opinion", 100), mk("v", "verified_fact", 100), mk("f", "fact", 100)], "understanding", 200);
     expect(r.selected.map((s) => s.id)).toEqual(["v", "f"]);
     expect(r.provenance.summary().excluded).toBe(1);
+  });
+  it("rejects invalid reliability and token metadata", () => {
+    const base = { source: "knowledge" as const, claimType: "fact" as const, content: "valid", createdAt: "" };
+    const r = selectContext([
+      { ...base, id: "bad-reliability", reliability: 1.5 },
+      { ...base, id: "nan-reliability", reliability: Number.NaN },
+      { ...base, id: "negative-tokens", tokens: -2 },
+      { ...base, id: "infinite-tokens", tokens: Number.POSITIVE_INFINITY },
+      { ...base, id: "valid", reliability: 0.7, tokens: 2 },
+    ], "understanding", 10);
+    expect(r.selected.map((item) => item.id)).toEqual(["valid"]);
+    expect(r.provenance.entries.filter((entry) => !entry.included).map((entry) => entry.reason))
+      .toEqual(["invalid_reliability", "invalid_reliability", "invalid_token_count", "invalid_token_count"]);
   });
 });
