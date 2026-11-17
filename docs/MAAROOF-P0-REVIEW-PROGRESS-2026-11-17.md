@@ -242,3 +242,14 @@ P0 deliverables now exist as six documented artifacts, but the evidence remains 
 5. The tracked `.env` path requires safe secret-exposure verification without opening or displaying its contents.
 
 **Decision: P0 remains OPEN. P1 is not started.**
+
+## 16. CI result for the current P0 documentation head
+
+GitHub Actions run `44053173735` completed successfully for head `72b255d61f663be272eb18f2ea3b28c47d586e84`.
+- Job: `Tests and production build`.
+- Dependency installation: success.
+- Unit tests: success.
+- Production build: success.
+- No live/paid probe step was part of this workflow.
+
+This confirms that the documentation-only P0 branch head passes the repository's configured unit-test and production-build workflow. It does not replace the missing semantic inventory, runtime export checks, lint/typecheck checks, or the excluded Supabase/auth/data-boundary verification.
