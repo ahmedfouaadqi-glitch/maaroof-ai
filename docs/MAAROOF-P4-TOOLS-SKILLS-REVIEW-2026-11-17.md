@@ -58,3 +58,27 @@
 - `agent.command` و`agent.run_targets` و`agent.visibility` و`teach_space`: مصنفة `group: agent`، وليست أدوات مباشرة ذات نموذج options مماثل للأدوات الثماني عشرة.
 
 **الاستنتاج:** سلامة عضوية المفاتيح مثبتة، لكن تصنيف العقود الستة لا يغني عن تتبع مسارات استدعائها الفعلية؛ يبقى هذا الجزء من P4 جزئياً.
+
+## خريطة مكونات الواجهة إلى مسارات API — عينة مصدرية موثقة
+
+| مكوّن الواجهة | مسارات API التي ظهرت صراحة في المصدر | ملاحظات |
+|---|---|---|
+| `Sandbox` | `/api/analyze`, `/api/geo-rewrite` | إعادة الصياغة جزء مضمّن من أداة التحليل |
+| `PostSuggester` | `/api/suggest` | طلب مباشر |
+| `CompetitorCompare` | `/api/compare` | طلب مباشر |
+| `KnownDiscovery` | `/api/known`, `/api/competitor-monitor` | إنشاء مراقبة المنافسين مرتبط بمسار المراقبة الموقوف |
+| `FeasibilityStudy` | `/api/feasibility` | يرسل `workspace_id` |
+| `BizDev` | `/api/bizdev` | يرسل `workspace_id` |
+| `BrandBoostAgent` | `/api/brand-boost`, `/api/brand-authority`, `/api/brand-boost-report-settings` | عدة مسارات ضمن تجربة واحدة |
+| `AppliedRanking` | `/api/applied-ranking` | طلب مباشر |
+| `VisibilityIntelligence` | `/api/site-discovery`, `/api/visibility-baseline` | سجل النتائج يقرأ من `brand_operations`؛ مسار تشغيل probe يحتاج تتبعاً إضافياً |
+| `GeoStrategist` | `/api/geo-strategist` | مساحة العميل تفشل مغلقة عند غياب عقد التخزين المعزول |
+| `WhatIfSimulator` | `/api/what-if` | baseline أصبح مقيداً بالمساحة |
+| `SmartResearch` | `/api/research` | يستخدم سياق المستخدم/المساحة |
+| `CompanyOutreach` | `/api/company-email` | يستخدم سياق المستخدم/المساحة |
+| `SecurityScanCard` | `/api/security-scan` | يرسل `workspace_id` |
+| `KeywordIntelligence` | `/api/keyword-upload`, `/api/dual-result` | رفع المرفقات والنتيجة المزدوجة |
+| `CompetitorMonitor` | `/api/competitor-monitor` | المسار معلّق مركزياً |
+| `ReportBuilder` | استعلامات Supabase مباشرة | بيانات المقاييس مقيّدة؛ القوالب وسجل الأدوات القديم مخفيان داخل مساحات العميل |
+
+هذه خريطة endpoint strings التي جرى التحقق منها في المكونات المحددة، وليست بعد جدولاً كاملاً لكل callbacks أو server functions أو كل 24 مفتاح كتالوج.
