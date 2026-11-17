@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { LoaderCircle, Send, Trash2, Paperclip, X, ListChecks, XCircle, Check, Copy, ChevronDown, FileDown, Plus, MessagesSquare, MapPin } from "lucide-react";
+import { LoaderCircle, Send, Paperclip, X, ListChecks, XCircle, Check, Copy, ChevronDown, FileDown, Plus, MessagesSquare, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { withPreviewAuth } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth";
@@ -215,7 +215,6 @@ export function Dardasha({
             <MessagesSquare className="size-4" />
           </button>
           {quota && <span className="rounded-full bg-muted px-3 py-1 text-xs tabular-nums">{(quota as any).approved ? tr(lang, "غير محدود", "Unlimited", "بێسنوور") : quota.unlimited ? tr(lang, "من رصيدك عند النجاح", "From balance on success", "لە باڵانس") : `${quota.remaining}/${quota.cap}`}</span>}
-          {threadId && <button type="button" onClick={async () => { if (window.confirm(tr(lang, "حذف هذه المحادثة؟", "Delete this conversation?", "سڕینەوە؟"))) { await call("DELETE", undefined, workspaceId, threadId); setMsgs([]); setThreads((ts) => ts.filter((t) => t.id !== threadId)); setThreadId(""); } }} className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted" aria-label="clear"><Trash2 className="size-4" /></button>}
         </div>
       </div>
       <div className={"maaroof-chat-layout min-w-0" + (historyCollapsed ? " is-history-collapsed" : "") + (historyOpen ? " is-history-open" : "")}>
