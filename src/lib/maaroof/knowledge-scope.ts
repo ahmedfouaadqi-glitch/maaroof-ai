@@ -1,15 +1,15 @@
 /**
  * PostgREST OR expression for knowledge recall.
- * Workspace runs may read platform knowledge and rows belonging to the exact
- * (user_id, workspace_id) pair only. Main-account runs may read platform
- * knowledge and account rows with a null workspace_id only.
+ * Platform knowledge is intentionally shared. Workspace knowledge is restricted
+ * to the exact workspace id; main-account knowledge requires a null workspace id
+ * and the exact owner id.
  */
 export function knowledgeRecallScopeFilter(userId?: string | null, workspaceId?: string | null): string {
   const clauses = ["scope.eq.platform"];
-  if (userId && workspaceId) {
-    clauses.push(`and(user_id.eq.${userId},workspace_id.eq.${workspaceId})`);
+  if (workspaceId) {
+    clauses.push(`and(scope.eq.workspace,workspace_id.eq.${workspaceId})`);
   } else if (userId) {
-    clauses.push(`and(user_id.eq.${userId},workspace_id.is.null)`);
+    clauses.push(`and(scope.eq.user,user_id.eq.${userId},workspace_id.is.null)`);
   }
   return clauses.join(",");
 }
