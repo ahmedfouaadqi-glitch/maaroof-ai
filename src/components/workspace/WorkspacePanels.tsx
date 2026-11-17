@@ -68,7 +68,7 @@ export function HistoryPanel({ lang, workspaceId, onOpen, onContinue }: { lang: 
       setJobs((current) => [...(current || []), ...(Array.isArray(b.jobs) ? b.jobs : [])]);
       setNextPage(Number.isInteger(b?.next_page) ? b.next_page : null);
     } catch {
-      setLoadError(true);
+      if (activeWorkspaceRef.current === requestedWorkspaceId) setLoadError(true);
     } finally {
       if (activeWorkspaceRef.current === requestedWorkspaceId) setLoadingMore(false);
     }
