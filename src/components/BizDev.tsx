@@ -16,6 +16,7 @@ import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 import { consumeHandoff } from "@/lib/tool-handoff";
 import { apiFetch } from "@/lib/api-client";
 import { SourcesList } from "@/components/SourcesList";
+import { effectiveWorkspaceGeoScope } from "@/lib/workspace-geo-scope";
 
 
 export function BizDev({ workspaceId = null, workspace = null }: { workspaceId?: string | null; workspace?: any } = {}) {
@@ -34,6 +35,18 @@ export function BizDev({ workspaceId = null, workspace = null }: { workspaceId?:
   const upd = (k: keyof typeof form) => (e: any) => setForm((p) => ({ ...p, [k]: e.target.value }));
 
   useEffect(() => {
+    const owned = workspaceId && workspace?.id === workspaceId ? workspace : null;
+    setForm((p) => ({
+      ...p,
+      business_name: String(owned?.entity_truth_card?.entity_name || owned?.name || ""),
+      sector: String(owned?.entity_truth_card?.sector || owned?.brand_summary || ""),
+      city: String(owned?.city || ""),
+    }));
+    setResult(null);
+    setError(null);
+  }, [workspaceId, workspace]);
+
+  useEffect(() => {
     const apply = (txt: string) => setForm((p) => ({ ...p, notes: (p.notes ? p.notes + "\n\n" : "") + txt.slice(0, 4000) }));
     const onReuse = (e: Event) => { const t = (e as CustomEvent).detail?.text; if (t) apply(String(t)); };
     window.addEventListener("geo:reuse-bizdev", onReuse);
@@ -50,7 +63,7 @@ export function BizDev({ workspaceId = null, workspace = null }: { workspaceId?:
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       const session = (await supabase.auth.getSession()).data.session;
       if (session) headers.Authorization = `Bearer ${session.access_token}`;
-      const r = await apiFetch("/api/bizdev", { method: "POST", headers, body: JSON.stringify({ ...form, lang: outLang, scope: getEffectiveScope(auth?.profile, "bizdev"), workspace_id: workspaceId }) });
+      const r = await apiFetch("/api/bizdev", { method: "POST", headers, body: JSON.stringify({ ...form, lang: outLang, scope: effectiveWorkspaceGeoScope(workspaceId, workspace, getEffectiveScope(auth?.profile, "bizdev")), workspace_id: workspaceId }) });
       const data = await r.json();
       if (!r.ok) { setError(data?.error || "error"); return; }
       setResult(data.result);
