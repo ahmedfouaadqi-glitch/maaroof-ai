@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useI18n } from "@/lib/i18n";
 import { ExportButtons } from "@/components/ExportButtons";
-import { payloadFromResult, useCaptureToolResult } from "@/lib/export-bus";
+import { payloadFromResult, useActiveWorkspaceId, useCaptureToolResult } from "@/lib/export-bus";
 import { TOOL_CATALOG } from "@/lib/tool-catalog";
 import type { ExportPayload } from "@/lib/exports";
 import { saveToolResult } from "@/lib/tool-history.functions";
@@ -35,6 +35,7 @@ export function ToolResultExport({
   size?: "sm" | "xs";
 }) {
   const { lang } = useI18n();
+  const workspaceId = useActiveWorkspaceId();
   const tool = TOOL_CATALOG.find((x) => x.key === toolKey);
   const label = title || (tool?.labels as any)?.[lang] || tool?.labels?.en || toolKey;
 
@@ -49,7 +50,7 @@ export function ToolResultExport({
     }
   }, [build, result, label, subtitle]);
 
-  useCaptureToolResult(toolKey, label, payload ? { ...payload, lang: lang as any } : null);
+  useCaptureToolResult(toolKey, label, payload ? { ...payload, lang: lang as any } : null, workspaceId);
 
   // Persist every distinct result into the user's per-tool history (silent on failure).
   const lastSaved = useRef<string>("");
