@@ -60,7 +60,7 @@ Not implemented: authenticated owner authorization, persisted approval events, p
 ## P12 — Secure sharing primitives
 
 Implemented:
-- `src/lib/reports/share-grant.ts`
+- `src/lib/reports/share-grant.server.ts`
 - `src/lib/reports/share-grant.test.ts`
 
 Generates 256-bit random base64url tokens, stores only SHA-256 hashes in the grant object, compares hashes in constant time, validates allowed formats and expiry, supports revoked/expired status, and blocks technical sharing unless explicitly allowed.
