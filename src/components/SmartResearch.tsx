@@ -16,6 +16,7 @@ import { apiFetch } from "@/lib/api-client";
 import { ProactiveNextStep } from "@/components/ProactiveNextStep";
 import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 import { SourcesList } from "@/components/SourcesList";
+import { effectiveWorkspaceGeoScope } from "@/lib/workspace-geo-scope";
 
 
 const CHANNEL_OPTIONS = [
@@ -24,7 +25,7 @@ const CHANNEL_OPTIONS = [
 
 type SearchMode = "web" | "company";
 
-export function SmartResearch() {
+export function SmartResearch({ workspaceId = null, workspace = null }: { workspaceId?: string | null; workspace?: any } = {}) {
   const { t, lang } = useI18n();
   const { profile, session } = useAuth();
   const specialty = (profile as any)?.specialty || "";
@@ -35,6 +36,11 @@ export function SmartResearch() {
   const [err, setErr] = useState("");
   const [includeChannels, setIncludeChannels] = useState(false);
   const [channelTypes, setChannelTypes] = useState<string[]>(["website", "linkedin", "instagram", "email"]);
+
+  useEffect(() => {
+    setOut(null);
+    setErr("");
+  }, [workspaceId, workspace?.id]);
 
   const toggleChannel = (c: string) =>
     setChannelTypes((p) => (p.includes(c) ? p.filter((x) => x !== c) : [...p, c]));
@@ -59,7 +65,7 @@ export function SmartResearch() {
       const res = await apiFetch("/api/research", {
         method: "POST", headers,
         body: JSON.stringify({
-          query: q, lang, scope: getEffectiveScope(profile, "research"),
+          query: q, lang, scope: effectiveWorkspaceGeoScope(workspaceId, workspace, getEffectiveScope(profile, "research")), workspace_id: workspaceId,
           mode,
           include_channels: includeChannels || mode === "company",
           channel_types: (includeChannels || mode === "company") ? channelTypes : undefined,
