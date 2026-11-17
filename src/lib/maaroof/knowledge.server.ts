@@ -6,6 +6,7 @@
 // knowledge graph across nine layers, with confidence/freshness/reliability
 // on every node and typed edges between them.
 import { createClient } from "@supabase/supabase-js";
+import { knowledgeRecallScopeFilter } from "./knowledge-scope";
 
 let _db: ReturnType<typeof createClient> | null = null;
 function db() {
@@ -95,6 +96,7 @@ export type UpsertNodeInput = {
 export async function upsertKnowledgeNode(input: UpsertNodeInput, freshnessDays = 30): Promise<string | null> {
   try {
     const scope = input.scope || (input.userId ? "user" : "platform");
+    if (scope === "workspace" && (!input.userId || !input.workspaceId)) return null;
     let q = db()
       .from("knowledge_nodes")
       .select("id, version, confidence, reliability, usage_count")
@@ -174,10 +176,9 @@ export async function recallKnowledge(opts: {
       .order("quality", { ascending: false })
       .limit(opts.limit ?? 8);
     if (opts.layers?.length) q = q.in("layer", opts.layers);
-    const filters = ["scope.eq.platform"];
-    if (opts.userId) filters.push(`user_id.eq.${opts.userId}`);
-    if (opts.workspaceId) filters.push(`workspace_id.eq.${opts.workspaceId}`);
-    q = q.or(filters.join(","));
+    // Platform knowledge is shared intentionally; user knowledge is restricted
+    // to the exact workspace, or to the main-account partition when no workspace is active.
+    q = q.or(knowledgeRecallScopeFilter(opts.userId, opts.workspaceId));
     const { data } = await q;
     const rows = ((data as any[]) || []) as KnowledgeNode[];
     if (rows.length) {
