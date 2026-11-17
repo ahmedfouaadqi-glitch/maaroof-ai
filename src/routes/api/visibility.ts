@@ -226,7 +226,10 @@ export const Route = createFileRoute("/api/visibility")({
               probeTopic = [cardKeywords, card.sector, workspace.brand_summary]
                 .filter(Boolean).join(" ").slice(0, 400);
             }
-            if (!probeTopic) {
+            // Client workspaces must never borrow the main account's sector or keywords.
+            // If workspace context is insufficient, the official-site discovery below must
+            // resolve it or the run returns a clear unresolved-category response.
+            if (!probeTopic && !workspaceId) {
               const { data: profile } = await admin.from("profiles").select("brand_keywords, specialty_scope").eq("id", userId).maybeSingle();
               probeTopic = String((profile as any)?.brand_keywords || (profile as any)?.specialty_scope || "").trim().slice(0, 400);
             }
