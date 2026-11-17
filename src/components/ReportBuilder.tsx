@@ -6,7 +6,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { ExportButtons } from "@/components/ExportButtons";
 import type { ExportPayload } from "@/lib/exports";
 import { useActiveWorkspaceId, useCapturedResults } from "@/lib/export-bus";
-import { blockDestructiveOperation } from "@/lib/non-destructive-mode";
 import { listToolHistory, getToolResult } from "@/lib/tool-history.functions";
 
 import {
@@ -32,7 +31,7 @@ function bucketByDay(rows: any[]): { day: string; count: number }[] {
 }
 
 export function ReportBuilder() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch {}
   const user = auth?.user;
@@ -136,10 +135,6 @@ export function ReportBuilder() {
     if (c.title) setTitle(c.title);
     setTimeout(loadData, 50);
   }
-  function delTemplate(_id: string) {
-    blockDestructiveOperation("report_template_delete");
-  }
-
   const chartData = useMemo(() => {
     const byDay: Record<string, any> = {};
     for (const k of selected) {
