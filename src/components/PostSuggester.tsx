@@ -12,6 +12,7 @@ import { Sparkles, Loader2, Upload, Image as ImageIcon, Type, Copy, Check, Lock,
 
 import { ToolHelpBanner } from "./ToolHelpBanner";
 import { GeoScopeSelector, getEffectiveScope } from "./GeoScopeSelector";
+import { effectiveWorkspaceGeoScope } from "@/lib/workspace-geo-scope";
 import type { ExportPayload } from "@/lib/exports";
 import { HandoffMenu } from "@/components/HandoffMenu";
 import { ProactiveNextStep } from "@/components/ProactiveNextStep";
@@ -54,9 +55,13 @@ const PLATFORMS: { id: Platform; icon: React.ReactNode; key: string }[] = [
 export function PostSuggester({
   initialSourceText,
   compact,
+  workspaceId = null,
+  workspace = null,
 }: {
   initialSourceText?: string;
   compact?: boolean;
+  workspaceId?: string | null;
+  workspace?: any;
 }) {
   const { t, lang } = useI18n();
   let auth: ReturnType<typeof useAuth> | null = null;
@@ -193,7 +198,8 @@ export function PostSuggester({
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       const session = (await supabase.auth.getSession()).data.session;
       if (session) headers.Authorization = `Bearer ${session.access_token}`;
-      (body as any).scope = getEffectiveScope(auth?.profile, "suggest");
+      (body as any).scope = effectiveWorkspaceGeoScope(workspaceId, workspace, getEffectiveScope(auth?.profile, "suggest"));
+      (body as any).workspace_id = workspaceId;
       const r = await apiFetch("/api/suggest", { method: "POST", headers, body: JSON.stringify(body) });
       const data = await r.json();
       if (r.status === 401) { setShowGate(true); return; }
