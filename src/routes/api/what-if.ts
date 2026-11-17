@@ -1,4 +1,4 @@
-import { workspaceGuard } from "@/lib/workspace-guard.server";
+import { pickWorkspaceId, workspaceGuard } from "@/lib/workspace-guard.server";
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { FACTUAL_SAFETY_PROMPT, LOVABLE_AI_CHAT_COMPLETIONS_URL, extractJsonObject, lovableAiHeaders } from "@/lib/lovable-ai";
@@ -26,6 +26,7 @@ export const Route = createFileRoute("/api/what-if")({
         const body = await request.json().catch(() => ({}));
         const workspaceDenied = await workspaceGuard(admin, userId, body);
         if (workspaceDenied) return workspaceDenied;
+        const workspaceId = pickWorkspaceId(body);
         const { brand, changes = {}, lang = "ar", kind = "market", axes = null } = body;
         if (!brand) return Response.json({ error: "brand_required" }, { status: 400 });
 
@@ -45,9 +46,14 @@ export const Route = createFileRoute("/api/what-if")({
           /* balance-only: charge already succeeded */ void limit;
         }
 
-        // Use last analysis or brand-boost report as baseline
-        const { data: lastAnalysis } = await admin.from("analyses").select("score,details").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle();
-        const { data: lastBoost } = await admin.from("brand_boost_runs").select("report").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+        // Baselines must belong to the exact selected workspace; account-level runs
+        // are kept separate from client workspace history. Missing scope columns fail closed.
+        let analysisQuery = admin.from("analyses").select("score,details").eq("user_id", userId);
+        let boostQuery = admin.from("brand_boost_runs").select("report").eq("user_id", userId);
+        analysisQuery = workspaceId ? analysisQuery.eq("workspace_id", workspaceId) : analysisQuery.is("workspace_id", null);
+        boostQuery = workspaceId ? boostQuery.eq("workspace_id", workspaceId) : boostQuery.is("workspace_id", null);
+        const { data: lastAnalysis } = await analysisQuery.order("created_at", { ascending: false }).limit(1).maybeSingle();
+        const { data: lastBoost } = await boostQuery.order("created_at", { ascending: false }).limit(1).maybeSingle();
 
         const langName = lang === "ar" ? "Arabic" : lang === "ku" ? "Kurdish Sorani" : "English";
         const sys = `${FACTUAL_SAFETY_PROMPT}
