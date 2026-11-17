@@ -40,18 +40,18 @@ export function listCapturedResults(workspaceId: string | null = null): Captured
     .sort((a, b) => b.at - a.at);
 }
 
-export function useCapturedResults(workspaceId: string | null = null): CapturedResult[] {
+export function useCapturedResults(workspaceId: string | null | undefined = null): CapturedResult[] {
   useSyncExternalStore(
     (cb) => { subs.add(cb); return () => { subs.delete(cb); }; },
     () => version,
     () => version,
   );
-  return listCapturedResults(workspaceId);
+  return workspaceId === undefined ? [] : listCapturedResults(workspaceId);
 }
 
 /** Current client-side workspace; null represents the main account scope. */
-export function useActiveWorkspaceId(): string | null {
-  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+export function useActiveWorkspaceId(): string | null | undefined {
+  const [workspaceId, setWorkspaceId] = useState<string | null | undefined>(undefined);
   useEffect(() => {
     const sync = () => {
       try { setWorkspaceId(window.localStorage.getItem("maaroof.active_workspace_id") || null); }
@@ -65,9 +65,9 @@ export function useActiveWorkspaceId(): string | null {
 }
 
 /** Register a tool result in its active workspace only. */
-export function useCaptureToolResult(toolKey: string, title: string, payload: ExportPayload | null, workspaceId: string | null = null) {
+export function useCaptureToolResult(toolKey: string, title: string, payload: ExportPayload | null, workspaceId: string | null | undefined = null) {
   useEffect(() => {
-    if (!payload) return;
+    if (!payload || workspaceId === undefined) return;
     captureToolResult(toolKey, title, payload, workspaceId);
   }, [toolKey, title, payload, workspaceId]);
 }
