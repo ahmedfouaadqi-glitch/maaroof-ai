@@ -25,6 +25,7 @@ import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 import { consumeHandoff } from "@/lib/tool-handoff";
 import { apiFetch } from "@/lib/api-client";
 import { checkEntityConsistency } from "@/lib/entity-consistency";
+import { effectiveWorkspaceGeoScope } from "@/lib/workspace-geo-scope";
 
 const SANDBOX_HINTS: Record<"ar" | "en" | "ku", string[]> = {
   ar: ["الصق فقرة من صفحة خدماتك…", "الصق وصف منتجك كما يظهر في موقعك…", "الصق نبذة «من نحن» لقياس قابليتها للاقتباس…", "الصق مقالاً أو منشوراً بأي لغة…"],
@@ -76,7 +77,7 @@ function localStepLabel(
   return L === "ar" ? `فحص الصلة بسياق ${cn}` : L === "ku" ? `پشکنینی پەیوەندی ${cn}` : `Checking ${cn} relevance`;
 }
 
-export function Sandbox() {
+export function Sandbox({ workspaceId = null, workspace = null }: { workspaceId?: string | null; workspace?: any } = {}) {
   const { t, lang } = useI18n();
   const [hintTick, setHintTick] = useState(0);
   const sandboxHint = SANDBOX_HINTS[lang === "en" || lang === "ku" ? lang : "ar"][hintTick % 4];
@@ -151,7 +152,7 @@ export function Sandbox() {
 
       const r = await apiFetch("/api/analyze", {
         method: "POST", headers,
-        body: JSON.stringify({ text, lang: outLang, scope: getEffectiveScope(auth?.profile, "analyze") }),
+        body: JSON.stringify({ text, lang: outLang, scope: effectiveWorkspaceGeoScope(workspaceId, workspace, getEffectiveScope(auth?.profile, "analyze")), workspace_id: workspaceId }),
       });
       const data = await r.json();
       await stepTimer;
@@ -451,7 +452,7 @@ export function Sandbox() {
                 if (session) headers.Authorization = `Bearer ${session.access_token}`;
                 const r = await apiFetch("/api/geo-rewrite", {
                   method: "POST", headers,
-                  body: JSON.stringify({ text, lang: outLang, scope: getEffectiveScope(auth?.profile, "analyze") }),
+                  body: JSON.stringify({ text, lang: outLang, scope: effectiveWorkspaceGeoScope(workspaceId, workspace, getEffectiveScope(auth?.profile, "analyze")), workspace_id: workspaceId }),
                 });
                 const data = await r.json();
                 if (!r.ok || data.error) {
@@ -546,7 +547,7 @@ export function Sandbox() {
         </div>
       )}
 
-      {showSuggester && <div className="mt-5"><PostSuggester initialSourceText={text} compact /></div>}
+      {showSuggester && <div className="mt-5"><PostSuggester initialSourceText={text} compact workspaceId={workspaceId} workspace={workspace} /></div>}
 
       {result && <HandoffMenu source="analyze" getText={() => [result.ai_view, ...(result.recommendations || [])].filter(Boolean).join("\n\n") || text} />}
       {result && (
