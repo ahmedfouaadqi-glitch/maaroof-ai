@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { apiFetch } from "@/lib/api-client";
 import { GeoScopeSelector, getEffectiveScope } from "./GeoScopeSelector";
+import { effectiveWorkspaceGeoScope } from "@/lib/workspace-geo-scope";
 import { ToolLangSelect } from "./ToolLangSelect";
 import { HandoffMenu } from "./HandoffMenu";
 import { ProactiveNextStep } from "@/components/ProactiveNextStep";
@@ -182,6 +183,23 @@ export function AppliedRanking({ workspaceId = null, workspace = null }: { works
   const [result, setResult] = useState<Result | null>(null);
 
   useEffect(() => {
+    if (workspaceId) {
+      const owned = workspace?.id === workspaceId ? workspace : null;
+      setBrand(String(owned?.entity_truth_card?.entity_name || owned?.name || ""));
+      setKeywords(Array.isArray(owned?.keywords) ? owned.keywords.join(", ") : String(owned?.keywords || owned?.entity_truth_card?.keywords || ""));
+      setSector(String(owned?.entity_truth_card?.sector || owned?.brand_summary || ""));
+      setWebsite(String(owned?.brand_url || ""));
+    } else {
+      setBrand("");
+      setKeywords("");
+      setSector("");
+      setWebsite("");
+    }
+    setResult(null);
+    setError(null);
+  }, [workspaceId, workspace]);
+
+  useEffect(() => {
     const apply = (text: string) => {
       const firstLine = (text.split("\n")[0] || "").trim().slice(0, 120);
       if (firstLine && !brand) setBrand(firstLine);
@@ -208,7 +226,7 @@ export function AppliedRanking({ workspaceId = null, workspace = null }: { works
         method: "POST", headers,
         body: JSON.stringify({
           brand_name: brand, brand_keywords: keywords, sector, website, app_name: appName, app_url: appUrl, notes,
-          lang: outLang, scope: getEffectiveScope(auth?.profile, "applied_ranking"), workspace_id: workspaceId,
+          lang: outLang, scope: effectiveWorkspaceGeoScope(workspaceId, workspace, getEffectiveScope(auth?.profile, "applied_ranking")), workspace_id: workspaceId,
         }),
       });
       const data = await r.json();
