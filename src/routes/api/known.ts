@@ -213,10 +213,7 @@ export const Route = createFileRoute("/api/known")({
         const { data: run, error: runInsertError } = await admin.from("mkd_runs").insert({
           user_id: userId, workspace_id: workspaceId, brand, depth, scope: (scope || {}) as any, status: "running", cost_tokens: (chg as any).tokens || 0,
         }).select("id").single();
-        if (workspaceId && runInsertError) {
-          console.error("[known] workspace-scoped run persistence failed", runInsertError.message);
-          return Response.json({ error: "workspace_run_persistence_unavailable" }, { status: 503 });
-        }
+        if (runInsertError) console.error("[known] run persistence failed", runInsertError.message);
         const dbRunId = (run as any)?.id as string | undefined;
 
         const enc = new TextEncoder();
