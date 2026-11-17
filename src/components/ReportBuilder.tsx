@@ -74,14 +74,20 @@ export function ReportBuilder() {
   const [pickedSaved, setPickedSaved] = useState<string[]>([]);
   const [savedPayloads, setSavedPayloads] = useState<Record<string, any>>({});
   useEffect(() => {
-    if (!user) return;
+    if (!user || activeWorkspaceId) {
+      // Legacy report_drafts rows are account-scoped; never import them into a client workspace.
+      setSavedItems([]);
+      setPickedSaved([]);
+      setSavedPayloads({});
+      return;
+    }
     (async () => {
       try {
         const r: any = await listToolHistory({ data: { limit: 50 } });
         setSavedItems(r?.items || []);
-      } catch {}
+      } catch { setSavedItems([]); }
     })();
-  }, [user?.id]);
+  }, [user?.id, activeWorkspaceId]);
   async function toggleSaved(id: string) {
     if (pickedSaved.includes(id)) { setPickedSaved((s) => s.filter((x) => x !== id)); return; }
     if (!savedPayloads[id]) {
@@ -105,7 +111,10 @@ export function ReportBuilder() {
       const m = METRICS.find((x) => x.id === k);
       if (!m) continue;
       try {
-        const { data: rows } = await supabase.from(m.table as any).select("*").gte("created_at", since).order("created_at", { ascending: false }).limit(200);
+        let query = supabase.from(m.table as any).select("*").eq("user_id", user.id);
+        query = activeWorkspaceId ? query.eq("workspace_id", activeWorkspaceId) : query.is("workspace_id", null);
+        const { data: rows, error } = await query.gte("created_at", since).order("created_at", { ascending: false }).limit(200);
+        if (error) throw error;
         out[k] = rows || [];
       } catch { out[k] = []; }
     }
@@ -115,15 +124,17 @@ export function ReportBuilder() {
 
   async function loadTemplates() {
     if (!user) return;
-    const { data: rows } = await supabase.from("report_templates").select("*").order("updated_at", { ascending: false });
-    setTemplates(rows || []);
+    let query = supabase.from("report_templates").select("*").eq("user_id", user.id);
+    query = activeWorkspaceId ? query.eq("workspace_id", activeWorkspaceId) : query.is("workspace_id", null);
+    const { data: rows, error } = await query.order("updated_at", { ascending: false });
+    setTemplates(error ? [] : rows || []);
   }
 
-  useEffect(() => { loadData(); loadTemplates(); /* eslint-disable-next-line */ }, [user?.id]);
+  useEffect(() => { loadData(); loadTemplates(); /* eslint-disable-next-line */ }, [user?.id, activeWorkspaceId]);
 
   async function saveTemplate() {
     if (!user || !tplName.trim()) return;
-    await supabase.from("report_templates").insert({ user_id: user.id, name: tplName.trim(), config: { selected, days, chart, title } });
+    await supabase.from("report_templates").insert({ user_id: user.id, workspace_id: activeWorkspaceId, name: tplName.trim(), config: { selected, days, chart, title } });
     setTplName("");
     loadTemplates();
   }
