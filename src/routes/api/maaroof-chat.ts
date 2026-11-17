@@ -53,14 +53,11 @@ export const Route = createFileRoute("/api/maaroof-chat")({
         return Response.json({ items: data ?? [], threads: [...(threads ?? []), ...((legacyCount || 0) > 0 ? [{ id: "legacy", title: "محادثات سابقة", updated_at: null }] : [])], tasks: jobs ?? [], quota: chatQuota({ metered: Number(p.tokens_balance) > 0 || p.tokens_daily_limit != null || p.tokens_monthly_limit != null, subscribed: !!p.is_subscribed, todayUserMessages: count || 0, unlimited }) });
       },
       DELETE: async ({ request }) => {
-        const a = await authed(request); if (!a) return Response.json({ error: "auth_required" }, { status: 401 });
-        const workspace = await resolveWorkspace(a.admin, a.userId, new URL(request.url).searchParams.get("workspace_id"));
-        if (workspace.error) return Response.json({ error: workspace.error }, { status: 400 });
-        const threadId = new URL(request.url).searchParams.get("thread_id") || "";
-        if (!threadId) return Response.json({ error: "thread_required" }, { status: 400 });
-        await byThread(scopeWorkspace(a.admin.from("maaroof_chat_messages").delete().eq("user_id", a.userId), workspace.id), threadId);
-        if (threadId !== "legacy") await a.admin.from("chat_threads").delete().eq("user_id", a.userId).eq("id", threadId);
-        return Response.json({ ok: true });
+        const a = await authed(request);
+        if (!a) return Response.json({ error: "auth_required" }, { status: 401 });
+        // Chat history is retained under the non-destructive owner policy.
+        // A reversible archive flow requires an explicit persisted archive contract.
+        return Response.json({ error: "history_deletion_disabled", code: "non_destructive_mode" }, { status: 409 });
       },
       POST: async ({ request }) => {
         const a = await authed(request); if (!a) return Response.json({ error: "auth_required" }, { status: 401 });
