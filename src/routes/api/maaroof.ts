@@ -130,13 +130,7 @@ export const Route = createFileRoute("/api/maaroof")({
         if (body?.auto_resume === true && typeof body?.resume_job_id === "string" && /^[0-9a-f-]{36}$/i.test(body.resume_job_id)) {
           let autoResumeQuery = (admin as any).from("maaroof_jobs").select("status, error, request_payload").eq("id", body.resume_job_id).eq("user_id", userId);
           autoResumeQuery = verifiedWorkspaceId ? autoResumeQuery.eq("workspace_id", verifiedWorkspaceId) : autoResumeQuery.is("workspace_id", null);
-          let { data: pj, error: autoResumeLookupError } = await autoResumeQuery.maybeSingle();
-          if (autoResumeLookupError) {
-            console.warn("[maaroof] scoped auto-resume lookup failed; retrying by user_id", autoResumeLookupError.message);
-            const fallback = await (admin as any).from("maaroof_jobs").select("status, error, request_payload").eq("id", body.resume_job_id).eq("user_id", userId).maybeSingle();
-            pj = fallback.data;
-            autoResumeLookupError = fallback.error;
-          }
+          const { data: pj, error: autoResumeLookupError } = await autoResumeQuery.maybeSingle();
           if (autoResumeLookupError) return Response.json({ error: "job_lookup_failed" }, { status: 503 });
           const { canAutoResume } = await import("@/lib/maaroof/jobs");
           freeAutoResume = !!pj && canAutoResume(pj, true);
@@ -165,16 +159,11 @@ export const Route = createFileRoute("/api/maaroof")({
           let pickedSkills: string[] = Array.isArray(body?.selected_skills) ? body.selected_skills.filter((x: unknown) => typeof x === "string").slice(0, 20) : [];
           const resumeRef = typeof body?.resume_job_id === "string" && /^[0-9a-f-]{36}$/i.test(body.resume_job_id) ? body.resume_job_id : null;
           if (resumeRef) {
-            // A user may intentionally continue a task from another one of their own workspaces.
-            // Ownership remains mandatory; the selected destination workspace does not hide source evidence.
-            const previousQuery = db.from("maaroof_jobs").select("id, request_payload").eq("id", resumeRef).eq("user_id", userId);
-            let { data: prevPayload, error: previousLookupError } = await previousQuery.maybeSingle();
-            if (previousLookupError) {
-              console.warn("[maaroof] scoped resume lookup failed; retrying by user_id", previousLookupError.message);
-              const fallback = await db.from("maaroof_jobs").select("id, request_payload").eq("id", resumeRef).eq("user_id", userId).maybeSingle();
-              prevPayload = fallback.data;
-              previousLookupError = fallback.error;
-            }
+            // Resume is restricted to the exact active workspace (including main-account scope).
+            // Never import another workspace's prior skills or evidence into this task.
+            let previousQuery = db.from("maaroof_jobs").select("id, request_payload").eq("id", resumeRef).eq("user_id", userId);
+            previousQuery = verifiedWorkspaceId ? previousQuery.eq("workspace_id", verifiedWorkspaceId) : previousQuery.is("workspace_id", null);
+            const { data: prevPayload, error: previousLookupError } = await previousQuery.maybeSingle();
             if (previousLookupError) return Response.json({ error: "job_lookup_failed" }, { status: 503 });
             if (!prevPayload) return Response.json({ error: "resume_job_not_found" }, { status: 404 });
             if (!pickedSkills.length) {
@@ -228,15 +217,10 @@ export const Route = createFileRoute("/api/maaroof")({
           let reusedResults: Record<string, any> | undefined;
           const resumeId = typeof body?.resume_job_id === "string" && /^[0-9a-f-]{36}$/i.test(body.resume_job_id) ? body.resume_job_id : null;
           if (resumeId) {
-            // Resume sources are allowed across the same user's workspaces, never across users.
-            const previousJobQuery = db.from("maaroof_jobs").select("id").eq("id", resumeId).eq("user_id", userId);
-            let { data: prevJob, error: previousJobLookupError } = await previousJobQuery.maybeSingle();
-            if (previousJobLookupError) {
-              console.warn("[maaroof] resume reuse scope failed; retrying by user_id", previousJobLookupError.message);
-              const fallback = await db.from("maaroof_jobs").select("id").eq("id", resumeId).eq("user_id", userId).maybeSingle();
-              prevJob = fallback.data;
-              previousJobLookupError = fallback.error;
-            }
+            // Reuse results only from the exact active workspace (including main-account scope).
+            let previousJobQuery = db.from("maaroof_jobs").select("id").eq("id", resumeId).eq("user_id", userId);
+            previousJobQuery = verifiedWorkspaceId ? previousJobQuery.eq("workspace_id", verifiedWorkspaceId) : previousJobQuery.is("workspace_id", null);
+            const { data: prevJob, error: previousJobLookupError } = await previousJobQuery.maybeSingle();
             if (previousJobLookupError) return Response.json({ error: "job_lookup_failed" }, { status: 503 });
             if (prevJob) {
               const { data: evs } = await db.from("maaroof_job_events").select("payload").eq("job_id", resumeId).eq("user_id", userId).eq("event_type", "tool_result").order("seq").limit(200);
@@ -250,9 +234,12 @@ export const Route = createFileRoute("/api/maaroof")({
           };
           let { data: job, error: jobErr } = await db.from("maaroof_jobs").insert(jobPayload).select("id").single();
           if (jobErr && isMissingWorkspaceIdColumn(jobErr)) {
-            // Older production schemas may not have the additive workspace_id column yet.
-            // Retry once without that column, retaining owner-only access and existing task data.
-            console.warn("[maaroof] workspace_id unavailable on maaroof_jobs; retrying legacy insert", jobErr.message);
+            // A workspace-scoped task must never be persisted without its workspace key.
+            // Keep legacy fallback only for the unscoped main-account path.
+            if (verifiedWorkspaceId) {
+              return Response.json({ error: "workspace_job_scope_unavailable" }, { status: 503 });
+            }
+            console.warn("[maaroof] workspace_id unavailable for unscoped job; using legacy insert", jobErr.message);
             const { workspace_id: _workspaceId, ...legacyPayload } = jobPayload;
             const retry = await db.from("maaroof_jobs").insert(legacyPayload).select("id").single();
             job = retry.data;
