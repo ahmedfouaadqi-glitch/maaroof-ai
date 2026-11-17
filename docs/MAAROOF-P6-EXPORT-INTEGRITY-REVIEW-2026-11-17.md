@@ -48,3 +48,13 @@ The website's `robots.txt` and `sitemap.xml` remain site-level resources, not cl
 ## P6 status
 
 **PARTIAL — two confirmed integrity defects corrected with regression tests.** Full browser/round-trip export validation and persisted data completeness remain outstanding.
+
+## تحديث اكتمال سجل المهمة والتقرير المستقل — 2026-11-17
+
+- أضيفت صفحات لسجل المهام والأحداث مع look-ahead row لتحديد وجود صفحات لاحقة دون فقد السجل.
+- أضيف زر تحميل المهام الأقدم إلى سجل مساحة العمل.
+- تصدير سجل المهمة يجمع صفحات الأحداث حتى النهاية، ويتحقق من تقدم مؤشر الصفحة حتى لا يدخل في حلقة أو يصدر ملفاً ناقصاً بصمت.
+- أضيف مولد HTML مستقل لتقرير العميل مع ثمانية أقسام، ودعم العربية/الإنجليزية/الكردية، وتطبيع حالات القياس والمصطلحات، وتعقيم النصوص، والتحقق من لون White Label ورابط الشعار.
+- أضيفت اختبارات للترجمة، عقد التقرير، التعقيم، المشاركة، وسير الموافقات.
+
+**الحالة لا تزال PARTIAL.** لم تنفذ اختبارات round-trip فعلية لملفات PDF/DOCX/PPTX/XLSX أو اختبار متصفح بصري. كما أن مولد HTML ومكونات Reports Center لم ترتبط بعد بمخزن تقارير دائم.
