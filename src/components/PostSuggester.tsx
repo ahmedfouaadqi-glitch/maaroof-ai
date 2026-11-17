@@ -238,7 +238,7 @@ export function PostSuggester({
       </div>
       <p className="mb-4 text-sm text-muted-foreground">{t("suggest_desc")}</p>
       <ToolHelpBanner toolKey="suggest" />
-      <div className="mt-3"><GeoScopeSelector compact toolKey="suggest" /></div>
+      {!workspaceId && <div className="mt-3"><GeoScopeSelector compact toolKey="suggest" /></div>}
 
       <div className="mb-3 flex justify-end">
         <ToolLangSelect value={outLang} onChange={setOutLang} />
