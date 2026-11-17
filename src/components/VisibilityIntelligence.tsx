@@ -81,15 +81,15 @@ export function VisibilityIntelligence({ workspaceId = null, workspace = null, i
   }, [workspace, workspaceId]);
 
   useEffect(() => {
-    if (workspace) return;
+    if (workspaceId) return;
     if (!brand && (auth.profile as any)?.brand_name) setBrand(String((auth.profile as any).brand_name));
     if (!keywords && (auth.profile as any)?.brand_keywords) setKeywords(String((auth.profile as any).brand_keywords));
-  }, [auth.profile, brand, keywords, workspace]);
+  }, [auth.profile, brand, keywords, workspaceId]);
 
   useEffect(() => {
-    if (workspace) return;
+    if (workspaceId) return;
     setScope(getEffectiveScope(auth.profile, "research"));
-  }, [auth.profile, workspace]);
+  }, [auth.profile, workspaceId]);
 
   useEffect(() => {
     if (view !== "history" || !auth.user?.id) return;
