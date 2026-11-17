@@ -24,11 +24,20 @@ export const Route = createFileRoute("/api/geo-strategist")({
         const { data: userData } = await admin.auth.getUser(auth.slice(7));
         const userId = userData?.user?.id;
         if (!userId) return Response.json({ error: "auth_required" }, { status: 401 });
+        const body = await request.json().catch(() => ({} as any));
+        const { workspaceGuard } = await import("@/lib/workspace-guard.server");
+        const workspaceDenied = await workspaceGuard(admin, userId, body);
+        if (workspaceDenied) return workspaceDenied;
+        const workspaceId = typeof body?.workspace_id === "string" && body.workspace_id.trim() ? body.workspace_id.trim() : null;
+        // geo_strategies has no verified workspace persistence contract in the repository migrations.
+        // Refuse workspace execution before billing rather than reading owner-wide history or writing an unscoped result.
+        if (workspaceId) return Response.json({ error: "workspace_scoped_storage_unavailable" }, { status: 503 });
+
         const _runId = crypto.randomUUID();
-          const _t0 = Date.now();
-          // Governed model selection (Part 12 registry) with the legacy default as fallback.
-          const _MODEL = await resolveToolModel("google/gemini-2.5-flash");
-          const _chg = await chargeTokens({ userId, toolKey: "geo_strategist", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/geo-strategist" } });
+        const _t0 = Date.now();
+        // Governed model selection (Part 12 registry) with the legacy default as fallback.
+        const _MODEL = await resolveToolModel("google/gemini-2.5-flash");
+        const _chg = await chargeTokens({ userId, toolKey: "geo_strategist", runId: _runId, meta: { provider: "lovable_ai", model: _MODEL, endpoint: "/api/geo-strategist" } });
         if (!_chg.ok) return Response.json(chargeFailureBody(_chg.reason as any, _chg.left), { status: 402 });
 
         const { data: prof } = await admin.from("profiles").select("*").eq("id", userId).maybeSingle();
@@ -39,8 +48,6 @@ export const Route = createFileRoute("/api/geo-strategist")({
         if (!(prof as any).is_subscribed && limit - used < COST) {
           /* balance-only: charge already succeeded */ void limit;
         }
-
-        const body = await request.json();
 
         const { brand, keywords = "", goals = {}, lang = "ar", scope, timeframe: tfRaw } = body;
         if (!brand) return Response.json({ error: "brand_required" }, { status: 400 });
