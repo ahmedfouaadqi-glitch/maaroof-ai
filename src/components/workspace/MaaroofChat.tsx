@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { LoaderCircle, Send, Trash2, ArrowLeftRight } from "lucide-react";
+import { LoaderCircle, Send, ArrowLeftRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { withPreviewAuth } from "@/lib/api-client";
 import { ShinyText } from "@/components/motion/effects";
@@ -60,7 +60,6 @@ export function MaaroofChat({ lang, onToTask }: { lang: L; onToTask: (goal: stri
           <h2 className="font-semibold">{tr(lang, "محادثة مع معروف", "Chat with Maaroof", "گفتوگۆ لەگەڵ معروف")}</h2>
           <p className="text-xs text-muted-foreground">{tr(lang, "يجيب مما تعلّمه في مساحة المعرفة فقط. إن احتاج بحثاً أو فحص النماذج العشرة يقترح تحويلها لمهمة بكلفة واضحة.", "Answers only from your knowledge space. If research or the ten-engine check is needed, it suggests a task with a clear cost.", "تەنها لە زانیارییەکانی تۆ وەڵام دەداتەوە.")}</p>
         </div>
-        {msgs.length > 0 && <button type="button" onClick={async () => { if (window.confirm(tr(lang, "حذف المحادثة؟", "Clear chat?", "سڕینەوە؟"))) { await call("DELETE"); setMsgs([]); } }} className="rounded-lg border border-border p-2 text-muted-foreground hover:bg-muted" aria-label="clear"><Trash2 className="size-4" /></button>}
       </div>
       <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
         <select value={taskId} onChange={(e) => setTaskId(e.target.value)} className="max-w-full flex-1 rounded-lg border border-border bg-background px-2 py-1.5" aria-label="context">
