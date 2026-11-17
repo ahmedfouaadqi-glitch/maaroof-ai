@@ -39,6 +39,7 @@ export function HistoryPanel({ lang, workspaceId, onOpen, onContinue }: { lang: 
     let active = true;
     setJobs(null);
     setNextPage(null);
+    setLoadingMore(false);
     setLoadError(false);
     (async () => {
       const t = await token();
