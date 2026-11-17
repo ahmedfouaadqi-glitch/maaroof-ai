@@ -78,7 +78,7 @@ export function BrandBoostAgent({ workspaceId = null, workspace = null }: { work
     const { data } = await query.order("created_at", { ascending: false });
     if (activeWorkspaceRef.current === requestedWorkspaceId) setJobs(data || []);
   };
-  useEffect(() => { setJobs([]); load(); }, [user?.id, workspaceId]);
+  useEffect(() => { setJobs([]); setReport(null); setErr(""); setRunning(null); load(); }, [user?.id, workspaceId]);
 
   const create = async () => {
     if (!user || !brand.trim() || !approved) return;
@@ -149,7 +149,7 @@ export function BrandBoostAgent({ workspaceId = null, workspace = null }: { work
       let data: any = {};
       try { data = text ? JSON.parse(text) : {}; } catch { data = { error: text.slice(0, 200) || `http_${res.status}` }; }
       if (!res.ok) throw new Error(data.error || `http_${res.status}`);
-      setReport(data);
+      if (activeWorkspaceRef.current === workspaceId) setReport(data);
       toast.success(outLang === "ar" ? t("auto.tokens_deducted_check_balance_above")
         : outLang === "ku" ? "تۆکن کەمکرایەوە ✓ — باڵانس لە سەرەوە بپشکنە"
         : "Tokens charged ✓ — see updated balance above");
@@ -158,8 +158,8 @@ export function BrandBoostAgent({ workspaceId = null, workspace = null }: { work
       updateJob = workspaceId ? updateJob.eq("workspace_id", workspaceId) : updateJob.is("workspace_id", null);
       await updateJob;
       await load();
-    } catch (e: any) { setErr(e?.message || "failed"); }
-    finally { setRunning(null); }
+    } catch (e: any) { if (activeWorkspaceRef.current === workspaceId) setErr(e?.message || "failed"); }
+    finally { if (activeWorkspaceRef.current === workspaceId) setRunning(null); }
   };
 
   return (
