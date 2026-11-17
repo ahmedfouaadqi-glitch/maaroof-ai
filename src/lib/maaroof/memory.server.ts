@@ -172,18 +172,8 @@ export async function remember(opts: {
     scope,
     consent_level: consent,
   });
-  const { count } = await db().from("maaroof_memory").select("id", { count: "exact", head: true }).eq("user_id", opts.userId);
-  if ((count || 0) > 1000) {
-    const { data: old } = await db()
-      .from("maaroof_memory")
-      .select("id")
-      .eq("user_id", opts.userId)
-      .order("importance", { ascending: true })
-      .order("last_accessed_at", { ascending: true })
-      .limit(((count || 0) - 1000));
-    const ids = ((old as any[]) || []).map((r) => r.id);
-    if (ids.length) await db().from("maaroof_memory").delete().in("id", ids);
-  }
+  // Preserve historical memory. Retention and archival require an explicit owner policy;
+  // never prune records automatically as a side effect of writing a new memory.
 }
 
 /**
