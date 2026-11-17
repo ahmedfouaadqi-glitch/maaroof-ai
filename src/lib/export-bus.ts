@@ -1,17 +1,22 @@
 import { engineAnswersOf, entityFromResult, type ResultEntity } from "@/lib/machine-pack";
 // Session-wide bus of the latest result of every tool, so the Report Builder
 // can combine live tool results with its database metrics.
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import type { ExportPayload, ExportSection } from "@/lib/exports";
 
 export type CapturedResult = {
   toolKey: string;
+  workspaceId: string | null;
   title: string;
   at: number;
   payload: ExportPayload;
 };
 
 const RESULTS = new Map<string, CapturedResult>();
+
+export function workspaceScopedResultKey(workspaceId: string | null, toolKey: string): string {
+  return (workspaceId ?? "__main__") + ":" + toolKey;
+}
 const subs = new Set<() => void>();
 let version = 0;
 
@@ -20,34 +25,51 @@ function emit() {
   for (const fn of subs) fn();
 }
 
-export function captureToolResult(toolKey: string, title: string, payload: ExportPayload) {
-  RESULTS.set(toolKey, { toolKey, title, at: Date.now(), payload });
+export function captureToolResult(toolKey: string, title: string, payload: ExportPayload, workspaceId: string | null = null) {
+  RESULTS.set(workspaceScopedResultKey(workspaceId, toolKey), { toolKey, workspaceId, title, at: Date.now(), payload });
   emit();
 }
 
-export function clearToolResult(toolKey: string) {
-  if (RESULTS.delete(toolKey)) emit();
+export function clearToolResult(toolKey: string, workspaceId: string | null = null) {
+  if (RESULTS.delete(workspaceScopedResultKey(workspaceId, toolKey))) emit();
 }
 
-export function listCapturedResults(): CapturedResult[] {
-  return Array.from(RESULTS.values()).sort((a, b) => b.at - a.at);
+export function listCapturedResults(workspaceId: string | null = null): CapturedResult[] {
+  return Array.from(RESULTS.values())
+    .filter((result) => result.workspaceId === workspaceId)
+    .sort((a, b) => b.at - a.at);
 }
 
-export function useCapturedResults(): CapturedResult[] {
+export function useCapturedResults(workspaceId: string | null = null): CapturedResult[] {
   useSyncExternalStore(
     (cb) => { subs.add(cb); return () => { subs.delete(cb); }; },
     () => version,
     () => version,
   );
-  return listCapturedResults();
+  return listCapturedResults(workspaceId);
 }
 
-/** Register a tool result for the Report Builder while it is on screen. */
-export function useCaptureToolResult(toolKey: string, title: string, payload: ExportPayload | null) {
+/** Current client-side workspace; null represents the main account scope. */
+export function useActiveWorkspaceId(): string | null {
+  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+  useEffect(() => {
+    const sync = () => {
+      try { setWorkspaceId(window.localStorage.getItem("maaroof.active_workspace_id") || null); }
+      catch { setWorkspaceId(null); }
+    };
+    sync();
+    window.addEventListener("maaroof:workspace-changed", sync);
+    return () => window.removeEventListener("maaroof:workspace-changed", sync);
+  }, []);
+  return workspaceId;
+}
+
+/** Register a tool result in its active workspace only. */
+export function useCaptureToolResult(toolKey: string, title: string, payload: ExportPayload | null, workspaceId: string | null = null) {
   useEffect(() => {
     if (!payload) return;
-    captureToolResult(toolKey, title, payload);
-  }, [toolKey, title, payload]);
+    captureToolResult(toolKey, title, payload, workspaceId);
+  }, [toolKey, title, payload, workspaceId]);
 }
 
 /* ---------------- generic result → sections serializer ---------------- */
