@@ -12,6 +12,7 @@ import { HandoffMenu } from "@/components/HandoffMenu";
 import { consumeHandoff } from "@/lib/tool-handoff";
 import { apiFetch } from "@/lib/api-client";
 import { ProactiveNextStep } from "@/components/ProactiveNextStep";
+import { effectiveWorkspaceGeoScope } from "@/lib/workspace-geo-scope";
 import { summarizeInput, summarizeOutput } from "@/lib/cognition-summary";
 
 type Mode = "email" | "brand";
@@ -34,6 +35,14 @@ export function CompanyOutreach({ workspaceId = null, workspace = null }: { work
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    const owned = workspaceId && workspace?.id === workspaceId ? workspace : null;
+    setCompany(String(owned?.entity_truth_card?.entity_name || owned?.name || ""));
+    setSector(String(owned?.entity_truth_card?.sector || owned?.brand_summary || ""));
+    setOut(null);
+    setErr("");
+  }, [workspaceId, workspace]);
+
+  useEffect(() => {
     const onReuse = (e: Event) => { const txt = (e as CustomEvent).detail?.text; if (txt) { const lines = String(txt).split("\n"); setCompany(lines[0].slice(0, 100)); setNotes(lines.slice(1).join("\n").slice(0, 2000)); } };
     window.addEventListener("geo:reuse-outreach", onReuse);
     const pending = consumeHandoff("outreach");
@@ -50,7 +59,7 @@ export function CompanyOutreach({ workspaceId = null, workspace = null }: { work
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
       const res = await apiFetch("/api/company-email", {
         method: "POST", headers,
-        body: JSON.stringify({ company, sector, goal, notes, lang: outLang, mode, scope: getEffectiveScope(auth?.profile, "outreach"), workspace_id: workspaceId }),
+        body: JSON.stringify({ company, sector, goal, notes, lang: outLang, mode, scope: effectiveWorkspaceGeoScope(workspaceId, workspace, getEffectiveScope(auth?.profile, "outreach")), workspace_id: workspaceId }),
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j.error || "failed");
