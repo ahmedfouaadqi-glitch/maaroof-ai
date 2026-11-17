@@ -76,8 +76,9 @@ async function sha(s: string): Promise<string> {
 export async function toolCacheKey(toolKey: string, userId: string, parts: unknown[], workspaceId?: string | null): Promise<string> {
   // Workspace isolation: the scope is part of the fingerprint, so a result is never reused in another space.
   const ws = workspaceId === undefined ? (await import("@/lib/request-ctx.server")).activeWorkspaceId() : workspaceId;
-  const fp = requestFingerprint([`ws:${ws || "main"}`, ...parts].map((p) => (typeof p === "string" ? p : JSON.stringify(p ?? ""))));
-  return `tool:${toolKey}:${userId}:${await sha(fp)}`;
+  const scopeKey = ws || "main";
+  const fp = requestFingerprint([`ws:${scopeKey}`, ...parts].map((p) => (typeof p === "string" ? p : JSON.stringify(p ?? ""))));
+  return `tool:${toolKey}:${userId}:${scopeKey}:${await sha(fp)}`;
 }
 
 /** Returns a previous result for the same user + same request, or null. Never throws. */
@@ -110,8 +111,10 @@ export async function mciPlanningHints(admin: SupabaseClient, userId: string): P
   try {
     const s = await loadMciSettings(admin);
     if (!s.enabled || s.tools.agent === false) return [];
+    const workspaceId = (await import("@/lib/request-ctx.server")).activeWorkspaceId();
+    const scopeKey = workspaceId || "main";
     const { data } = await admin.from("engine_answer_cache").select("cache_key, created_at")
-      .like("cache_key", `tool:%:${userId}:%`).order("created_at", { ascending: false }).limit(30);
+      .like("cache_key", `tool:%:${userId}:${scopeKey}:%`).order("created_at", { ascending: false }).limit(30);
     const out: Array<{ tool: string; at: string }> = [];
     for (const r of (data || []) as any[]) {
       const tool = String(r.cache_key).split(":")[1];
