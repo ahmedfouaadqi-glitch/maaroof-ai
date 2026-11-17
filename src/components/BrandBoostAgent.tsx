@@ -163,7 +163,7 @@ export function BrandBoostAgent({ workspaceId = null, workspace = null }: { work
           <p className="mt-1 text-xs text-muted-foreground">{t("boost_desc")}</p>
           <div className="mt-1 text-[11px] text-amber-600">{t("boost_addon_note")}</div>
           <ToolHelpBanner toolKey="brand" />
-          <div className="mt-3"><GeoScopeSelector compact toolKey="brand" /></div>
+          <div className="mt-3">{workspaceId ? <p className="text-[11px] text-muted-foreground">{lang === "ar" ? "النطاق الجغرافي يتبع بيانات مساحة العميل." : lang === "ku" ? "مەودای جوگرافی بە داتای شوێنی کڕیارەوە بەستراوە." : "Geographic scope follows the client workspace profile."}</p> : <GeoScopeSelector compact toolKey="brand" />}</div>
         </div>
         <ToolLangSelect value={outLang} onChange={setOutLang} className="w-full flex-wrap sm:w-auto sm:justify-end" />
       </div>
