@@ -94,8 +94,13 @@ export function VisibilityIntelligence({ workspaceId = null, workspace = null, i
   useEffect(() => {
     if (view !== "history" || !auth.user?.id) return;
     let active = true;
-    setHistoryLoading(true);
+    setHistoryRows([]);
     setHistoryError("");
+    if (workspaceId === undefined) {
+      setHistoryLoading(false);
+      return () => { active = false; };
+    }
+    setHistoryLoading(true);
     const loadHistory = async () => {
       let query = supabase.from("brand_operations")
         .select("id, operation_type, brand_name, status, created_at, request_meta, result_meta, is_baseline")
