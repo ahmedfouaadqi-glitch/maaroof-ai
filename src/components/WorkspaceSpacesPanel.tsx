@@ -2,12 +2,12 @@
 // Reuses existing workspace + knowledge-space interview functions; no new billing path.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Building2, Package, Users, Plus, LoaderCircle, MessageSquareText, Check, CircleAlert, GitBranch, Trash2, ChevronDown, ChevronLeft } from "lucide-react";
-import { listWorkspaces, createWorkspace, deleteWorkspace, ensureWorkspaceKnowledgeSpace, listInterviewQuestions } from "@/lib/workspaces.functions";
+import { Building2, Package, Users, Plus, LoaderCircle, MessageSquareText, Check, CircleAlert, GitBranch, ChevronDown, ChevronLeft } from "lucide-react";
+import { listWorkspaces, createWorkspace, ensureWorkspaceKnowledgeSpace, listInterviewQuestions } from "@/lib/workspaces.functions";
 import { generateSpaceInterview, answerSpaceInterview } from "@/lib/teaching.functions";
 import { getCostPreview, type CostPreview } from "@/lib/tokens.functions";
 import { supabase } from "@/integrations/supabase/client";
-import { allowedChildKinds, descendantIds, inferAccountKind, type SpaceKind, type StructureAnswers } from "@/lib/space-structure";
+import { allowedChildKinds, inferAccountKind, type SpaceKind, type StructureAnswers } from "@/lib/space-structure";
 import { ACCOUNT_KINDS, type AccountKind } from "@/lib/account-kinds";
 
 type L = "ar" | "en" | "ku";
@@ -27,7 +27,6 @@ export function WorkspaceSpacesPanel({ lang, workspaceId }: { lang: L; workspace
   const t = T[lang];
   const list = useServerFn(listWorkspaces);
   const create = useServerFn(createWorkspace);
-  const remove = useServerFn(deleteWorkspace);
   const [profileKind, setProfileKind] = useState<AccountKind | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const ensure = useServerFn(ensureWorkspaceKnowledgeSpace);
@@ -94,17 +93,6 @@ export function WorkspaceSpacesPanel({ lang, workspaceId }: { lang: L; workspace
   const childrenOf = (id: string) => items.filter((w) => w.parent_id === id);
   const accountKind: AccountKind | null = profileKind;
 
-  async function removeSpace(id: string) {
-    const ids = descendantIds(id, items);
-    if (!window.confirm(`${t.delConfirm} ${ids.length}`)) return;
-    setError(null);
-    try {
-      await remove({ data: { id } });
-      if (active && ids.includes(active)) setActive(null);
-      await reload();
-    } catch (e: any) { setError(String(e?.message || e)); }
-  }
-
   const renderNode = (w: Ws, depth: number): React.ReactNode => {
     const kids = childrenOf(w.id);
     const addKinds = allowedChildKinds(w.space_kind, accountKind);
@@ -118,7 +106,6 @@ export function WorkspaceSpacesPanel({ lang, workspaceId }: { lang: L; workspace
             </button>
           ) : <span className="w-4" />}
           <div className="flex-1"><SpaceRow w={w} active={active === w.id} onPick={() => setActive(w.id)} label={kindLabel(w.space_kind)} /></div>
-          <button type="button" aria-label={t.del} title={t.del} onClick={() => void removeSpace(w.id)} className="rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 className="size-3.5" /></button>
         </div>
         {open && kids.length > 0 && <ul className="ms-5 space-y-1 border-s border-border ps-2">{kids.map((k) => renderNode(k, depth + 1))}</ul>}
         {addKinds.length > 0 && (
