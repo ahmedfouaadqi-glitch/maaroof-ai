@@ -264,3 +264,10 @@ Reviewed current branch source and tests for:
 - `src/lib/exports.ts`: the six-sheet XLSX branch truncates names and handles duplicates but omits the forbidden-character sanitization used by the regular workbook branch.
 
 The findings and exact evidence classifications are added to the P0 risk register. No source code was changed. These are P0 audit findings; fixes remain sequenced after the P0 gate and in the relevant implementation phases.
+
+
+## 18. Critical P0 security finding — public tracked `.env`
+
+Metadata-only verification confirms the repository is public and its tracked root tree contains `.env` (685 bytes). The tracked `.gitignore` does not ignore `.env`. Git path history shows commits on 2026-05-07 and 2026-06-05. The file content was deliberately not opened or disclosed.
+
+This is a confirmed public-repository exposure of an environment file, not proof that every value is a valid secret. Treat any credentials that may be present as potentially compromised and rotate them through the relevant provider consoles. No rotation, deletion, history rewrite or repository cleanup was performed. R-01 is now Critical and blocks P0 security acceptance until the owner verifies rotation and safe remediation.
