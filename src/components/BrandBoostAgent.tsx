@@ -1,5 +1,5 @@
 import { neutralizeCsvFormula } from "@/lib/exports";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { strToU8, zipSync } from "fflate";
 import { ToolResultExport } from "@/components/ToolResultExport";
 import { ExportButtons } from "@/components/ExportButtons";
@@ -33,6 +33,8 @@ export function BrandBoostAgent({ workspaceId = null, workspace = null }: { work
   const [outLang, setOutLang] = useState<Lang>(lang);
   const { user, profile } = useAuth();
   const [jobs, setJobs] = useState<any[]>([]);
+  const activeWorkspaceRef = useRef(workspaceId);
+  activeWorkspaceRef.current = workspaceId;
   const [brand, setBrand] = useState(String(workspaceId
     ? workspace?.entity_truth_card?.entity_name || workspace?.name || ""
     : (profile as any)?.brand_name || ""));
@@ -70,10 +72,11 @@ export function BrandBoostAgent({ workspaceId = null, workspace = null }: { work
 
   const load = async () => {
     if (!user) return;
+    const requestedWorkspaceId = workspaceId;
     let query = supabase.from("brand_boost_jobs").select("*").eq("user_id", user.id);
-    query = workspaceId ? query.eq("workspace_id", workspaceId) : query.is("workspace_id", null);
+    query = requestedWorkspaceId ? query.eq("workspace_id", requestedWorkspaceId) : query.is("workspace_id", null);
     const { data } = await query.order("created_at", { ascending: false });
-    setJobs(data || []);
+    if (activeWorkspaceRef.current === requestedWorkspaceId) setJobs(data || []);
   };
   useEffect(() => { load(); }, [user?.id, workspaceId]);
 
