@@ -39,3 +39,13 @@
 ## P4 status
 
 **PARTIAL — registry integrity and skill references verified.** Full endpoint request-contract mapping, external package license review, and operational engine dependency review remain to be completed. No catalog was changed.
+
+## تنفيذ ومراجعة إضافية للمسارات — 2026-11-17
+
+- واجهة `SkillToolsPanel` تعرض الأدوات التي لها مكوّن UI مباشر، وتعرض الأدوات الأخرى المرتبطة بالمهارة بوصفها تعمل ضمن المهام فقط؛ لا يجوز اعتبار غياب مكوّن مباشر دليلاً على فقدان الأداة من الكتالوج.
+- `DirectToolsPanel` يضم مكوّنات الأدوات المباشرة، ويعرض `competitor_monitor` بحالة توقف معلنة دون إطلاق تنفيذ.
+- `workspaceGuard` يثبت ملكية المساحة في سياق الطلب؛ و`getUserContext` يقرأ بيانات مساحة العمل من سجلها بدلاً من ملف الحساب عندما يكون سياق المساحة مثبتاً.
+- عُزلت مفاتيح MCI وتلميحات التخطيط حسب الحساب/المساحة، وعُزلت إعادة استخدام نتائج Known وحفظ سجل تشغيلها حسب مساحة العمل. عند غياب دعم `workspace_id` في مخزن Known، يُرفض تشغيل المساحة قبل الخصم.
+- تمت مراجعة عينة من المسارات المباشرة ومسارات المرفقات والتقارير والمهام؛ بعض المسارات تستخدم تحقق ملكية يدوياً بدلاً من `workspaceGuard`، وبعضها يعتمد سياق الطلب المشترك.
+
+**ما لم يُحسم:** لم يكتمل بعد جدول موثق لكل مكوّن UI → endpoint → body contract → authorization → workspace persistence لكل الأدوات الـ24. لا تزال مراجعة كل route وجميع حقول `TOOL_OPTIONS` مطلوبة. لم تُنفذ اختبارات تشغيل فعلية أو اتصالات مزودين.
