@@ -5,7 +5,7 @@ import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { ExportButtons } from "@/components/ExportButtons";
 import type { ExportPayload } from "@/lib/exports";
-import { useCapturedResults } from "@/lib/export-bus";
+import { useActiveWorkspaceId, useCapturedResults } from "@/lib/export-bus";
 import { listToolHistory, getToolResult } from "@/lib/tool-history.functions";
 
 import {
@@ -54,7 +54,8 @@ export function ReportBuilder() {
   const [templates, setTemplates] = useState<any[]>([]);
   const [tplName, setTplName] = useState("");
   // Live results captured from the tools during this session.
-  const captured = useCapturedResults();
+  const activeWorkspaceId = useActiveWorkspaceId();
+  const captured = useCapturedResults(activeWorkspaceId);
   const [pickedTools, setPickedTools] = useState<string[]>([]);
   useEffect(() => {
     setPickedTools((prev) => {
