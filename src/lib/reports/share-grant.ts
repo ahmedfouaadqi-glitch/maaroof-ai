@@ -67,7 +67,8 @@ export function shareGrantStatus(grant: ShareGrant, now = new Date().toISOString
 
 export function matchesShareToken(grant: ShareGrant, token: string): boolean {
   if (!token || !/^[A-Za-z0-9_-]{40,60}$/.test(token)) return false;
-  const expected = Buffer.from(grant.tokenHash, "hex");
-  const actual = Buffer.from(hashShareToken(token), "hex");
+  const toBytes = (hex: string) => Uint8Array.from(hex.match(/.{2}/g) || [], (pair) => Number.parseInt(pair, 16));
+  const expected = toBytes(grant.tokenHash);
+  const actual = toBytes(hashShareToken(token));
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
