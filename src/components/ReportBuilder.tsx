@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FileText, Loader2, Save, RefreshCw, BarChart3, LineChart as LineIcon, Radar as RadarIcon } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
@@ -55,6 +55,8 @@ export function ReportBuilder() {
   const [tplName, setTplName] = useState("");
   // Live results captured from the tools during this session.
   const activeWorkspaceId = useActiveWorkspaceId();
+  const activeWorkspaceRef = useRef(activeWorkspaceId);
+  activeWorkspaceRef.current = activeWorkspaceId;
   const captured = useCapturedResults(activeWorkspaceId);
   const [pickedTools, setPickedTools] = useState<string[]>([]);
   useEffect(() => {
@@ -109,6 +111,7 @@ export function ReportBuilder() {
       setBusy(false);
       return;
     }
+    const requestedWorkspaceId = activeWorkspaceId;
     setBusy(true);
     setData({});
     const since = range(days);
@@ -124,8 +127,8 @@ export function ReportBuilder() {
         out[k] = rows || [];
       } catch { out[k] = []; }
     }
-    setData(out);
-    setBusy(false);
+    if (activeWorkspaceRef.current === requestedWorkspaceId) setData(out);
+    if (activeWorkspaceRef.current === requestedWorkspaceId) setBusy(false);
   }
 
   async function loadTemplates() {
@@ -136,8 +139,9 @@ export function ReportBuilder() {
     setTemplates([]);
     let query = supabase.from("report_templates").select("*").eq("user_id", user.id);
     query = activeWorkspaceId ? query.eq("workspace_id", activeWorkspaceId) : query.is("workspace_id", null);
+    const requestedWorkspaceId = activeWorkspaceId;
     const { data: rows, error } = await query.order("updated_at", { ascending: false });
-    setTemplates(error ? [] : rows || []);
+    if (activeWorkspaceRef.current === requestedWorkspaceId) setTemplates(error ? [] : rows || []);
   }
 
   useEffect(() => { loadData(); loadTemplates(); /* eslint-disable-next-line */ }, [user?.id, activeWorkspaceId]);
