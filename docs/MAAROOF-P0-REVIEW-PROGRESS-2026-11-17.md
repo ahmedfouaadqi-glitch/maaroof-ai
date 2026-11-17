@@ -139,3 +139,49 @@ The top-level route directory was enumerated. The following public-facing route 
 - No route was invoked in a browser, no SSR output was inspected, and no accessibility, localization-switching, metadata validation, sitemap URL reachability, or structured-data validation was performed.
 - Authenticated routes, API routes, Lovable integration routes, profile/user routes, workspace routes, admin routes and dynamic data-backed pages remain unreviewed because their call chains may enter excluded authentication or Supabase services.
 - This route batch is a partial public-route inventory only; it does not close the P0 requirement to map all routes and their dependencies.
+
+## 10. Workspace rules and component-level data-lifecycle review
+
+### 10.1 Pure workspace and account rules
+Reviewed:
+- `account-kinds.ts` and tests: exactly seven account kinds are defined and tested; each maps to a base entity type. Presence notes distinguish missing website/social links.
+- `space-structure.ts`: pure tree rules define company → product/subsidiary/client, subsidiary/client → product, and product as a leaf. `descendantIds` is cycle-safe. Space caps are 1/5/10/25/100 for free/pro/premium/business/enterprise, with unknown tiers falling back to free.
+- `workspace-scope.ts`: pure row predicate distinguishes the main account (null workspace) from a selected workspace. Tests cover basic matching and non-matching cases.
+- `workspace-panels.ts`: pure monthly token ledger aggregation and knowledge-completion percentage. Tests cover month totals and simple completion cases.
+These pure helpers establish intended rules only; they do not prove that every server query or persisted record enforces them.
+
+### 10.2 Isolation tests — scope limitation
+- `workspace-isolation.test.ts` checks workspace-specific MCI cache keys and checks selected source files for a profile-brand write pattern. It reads source files and calls server-side helpers.
+- `workspace-guard.test.ts` uses a mocked query-builder object to test allow/reject outcomes.
+- These tests are useful unit evidence but do not prove actual database row-level security, authorization under real sessions, or isolation of every table and server function. Those checks are explicitly excluded because the relevant boundary is Supabase-backed.
+- Do not describe workspace isolation as fully verified until permitted evidence covers all non-excluded layers; under the current Supabase prohibition, persisted isolation remains unverified.
+
+### 10.3 Component-level destructive and export flows
+Reviewed component imports and relevant control paths:
+- `ToolHistory.tsx` exposes per-item deletion and clear-all history actions through `deleteToolResult` and `clearToolHistory`. The server implementations were not opened. Retention, soft-delete vs hard-delete, ownership checks, and cascade effects are therefore **unknown**.
+- `WorkspaceSpacesPanel.tsx` exposes a delete action with a confirmation message explicitly warning that the selected space and descendants will be deleted; it computes descendant IDs client-side and calls `deleteWorkspace`. The persistence behavior, cascade boundaries, restoration path and treatment of associated reports/files/history are **unknown** due the excluded service boundary. This is a P0 high-priority data-preservation risk.
+- `ReportBuilder.tsx` imports the Supabase client directly, plus tool-history functions and the export bus. It was not inspected beyond its import boundary. Workspace scoping of its database metrics and report data remains excluded/unverified.
+- `WorkspaceAuditPulse.tsx` imports the Supabase client directly and is not reviewed beyond its import boundary.
+- `ApprovalQueue.tsx` uses server functions for listing, approving/publishing and rejecting. The service implementation and authorization are not reviewed.
+- `ExportButtons.tsx` uses pure format renderers and export configuration, but also calls a translation server function. UI behavior, language completeness and server translation cost/error handling are not end-to-end verified.
+- `ToolResultExport.tsx` captures tool results into the export bus and invokes tool-history persistence; the service persistence contract remains unverified.
+
+### 10.4 Confirmed export-bus scope concern
+The pure `src/lib/export-bus.ts` implementation uses a module-global `Map<string, CapturedResult>`, where the key is only `toolKey`. Its own comment describes it as a session-wide bus for combining live tool results with report metrics. No workspace or owner key is present in the map key or captured-result shape.
+- **Confirmed implementation fact:** one captured result per tool key is held in the current JavaScript module instance, regardless of workspace identity passed to this helper (there is no workspace parameter).
+- **Risk assessment:** if one application session switches between workspaces and the Report Builder reads this same bus, the latest result for a tool can be surfaced in a different workspace's report. This is a credible cross-workspace contamination risk; actual UI lifecycle and report inclusion must be verified before classifying it as an observed leak.
+- No code change was made. The future fix must preserve existing export behavior while adding an explicit workspace/owner scope and tests for switching between workspaces.
+
+### 10.5 Deletion policy conflict to resolve before P1
+The approved project constraint is to preserve customer data, history and reports. The UI currently exposes hard-sounding delete operations for tool history and workspace trees. Until service behavior is verified within an allowed boundary, do not assume these are hard deletes or safe soft deletes. P1 must not introduce any deletion, cascade or cleanup behavior; any required removal should be reversible/archive-first and retain dependent records unless explicitly authorized.
+
+## 11. Updated P0 remaining-work list
+1. Finish the allowed source inventory and architecture/dependency map without crossing Supabase/auth/data-service exclusions.
+2. Review pure workspace-related tests and static callers more comprehensively; avoid server implementation files that cross the prohibited service boundary.
+3. Resolve the MCI historical-documentation versus current-foundation wording with a permitted call-site inventory.
+4. Map the exact report/export data flow, including export-bus consumers, without opening excluded persistence services.
+5. Complete route/component/test-to-feature mapping for the permitted scope.
+6. Reconcile prior P0 drafts into the five acceptance artifacts and mark all excluded controls as unverified.
+7. Reconfirm the eleven protected file blob SHAs before any future code-writing phase.
+
+P0 remains **OPEN**. No application code, database, auth configuration, secrets, or deployment were changed in this batch.
