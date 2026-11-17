@@ -57,7 +57,7 @@ export function VisibilityIntelligence({ workspaceId = null, workspace = null, i
   // Keep client context separate from the account profile during workspace changes and hydration.
   useEffect(() => {
     if (workspaceId) {
-      if (!workspace) {
+      if (!workspace || workspace.id !== workspaceId) {
         setBrand("");
         setOfficialWebsite("");
         setKeywords("");
