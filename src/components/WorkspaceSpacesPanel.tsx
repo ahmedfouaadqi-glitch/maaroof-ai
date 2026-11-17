@@ -165,6 +165,7 @@ export function WorkspaceSpacesPanel({ lang, workspaceId }: { lang: L; workspace
     <div className="space-y-4 rounded-2xl border border-border bg-card p-4 md:p-5">
       <h2 className="font-semibold">{t.title}</h2>
       {error && <p className="flex items-center gap-2 rounded-lg bg-destructive/10 p-2 text-xs text-destructive"><CircleAlert className="size-4" />{error}</p>}
+      <p className="text-[10px] text-muted-foreground">{lang === "en" ? "Workspace deletion is disabled to preserve all related history." : lang === "ku" ? "سڕینەوەی شوێن بۆ پاراستنی هەموو مێژووی پەیوەندیدار ناچالاک کراوە." : "تم إيقاف حذف المساحات للحفاظ على جميع السجلات المرتبطة بها."}</p>
 
       {loading ? <LoaderCircle className="size-4 animate-spin text-muted-foreground" /> : companies.length === 0 ? (
         <div className="space-y-3">
