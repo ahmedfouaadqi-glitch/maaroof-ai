@@ -2,6 +2,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { blockDestructiveOperation } from "@/lib/non-destructive-mode";
 
 const MAX_PER_TOOL = 50;
 
@@ -32,17 +33,7 @@ export const saveToolResult = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
 
-    // Trim to the newest MAX_PER_TOOL rows for this tool.
-    const { data: olds } = await supabase
-      .from("report_drafts")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("tool_key", data.toolKey)
-      .order("created_at", { ascending: false })
-      .range(MAX_PER_TOOL, MAX_PER_TOOL + 200);
-    const ids = (olds || []).map((r: any) => r.id);
-    if (ids.length) await supabase.from("report_drafts").delete().in("id", ids);
-
+    // Keep all historical results; no automatic retention deletion in non-destructive mode.
     return { ok: true, id: row?.id as string, created_at: row?.created_at as string };
   });
 
@@ -84,23 +75,9 @@ export const getToolResult = createServerFn({ method: "GET" })
 export const deleteToolResult = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { id: string }) => z.object({ id: z.string().uuid() }).parse(d))
-  .handler(async ({ data, context }) => {
-    const { supabase, userId } = context as any;
-    const { error } = await supabase.from("report_drafts").delete().eq("user_id", userId).eq("id", data.id);
-    if (error) throw new Error(error.message);
-    return { ok: true };
-  });
+  .handler(async () => blockDestructiveOperation("tool_result_delete"));
 
 export const clearToolHistory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { toolKey: string }) => z.object({ toolKey: z.string().trim().min(1).max(60) }).parse(d))
-  .handler(async ({ data, context }) => {
-    const { supabase, userId } = context as any;
-    const { error } = await supabase
-      .from("report_drafts")
-      .delete()
-      .eq("user_id", userId)
-      .eq("tool_key", data.toolKey);
-    if (error) throw new Error(error.message);
-    return { ok: true };
-  });
+  .handler(async () => blockDestructiveOperation("tool_history_clear"));

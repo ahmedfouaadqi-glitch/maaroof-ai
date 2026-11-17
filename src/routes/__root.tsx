@@ -1,3 +1,4 @@
+import { Toaster } from "@/components/ui/sonner";
 import type { ErrorComponentProps } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -192,6 +193,7 @@ function RootComponent() {
         <SiteBackground />
         <PageTransition>
           <Outlet />
+          <Toaster richColors position="top-center" />
         </PageTransition>
       </CountryProvider>
     </QueryClientProvider>

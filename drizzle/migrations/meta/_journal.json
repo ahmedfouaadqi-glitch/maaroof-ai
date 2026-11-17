@@ -225,6 +225,13 @@
       "when": 1794783357483,
       "tag": "0031_archived_client_records",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1794932504732,
+      "tag": "0032_executive_reports",
+      "breakpoints": true
     }
   ]
 }

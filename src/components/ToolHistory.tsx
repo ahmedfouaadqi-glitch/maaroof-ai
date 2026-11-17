@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { History, Loader2, RefreshCw, Trash2, ChevronDown, ChevronUp } from "lucide-react";
+import { History, Loader2, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { ExportButtons } from "@/components/ExportButtons";
@@ -8,8 +8,6 @@ import type { ExportPayload } from "@/lib/exports";
 import {
   listToolHistory,
   getToolResult,
-  deleteToolResult,
-  clearToolHistory,
 } from "@/lib/tool-history.functions";
 
 type Item = { id: string; tool_key: string; title: string; lang: string | null; created_at: string };
@@ -51,12 +49,7 @@ export function ToolHistory({ toolKey, className = "" }: { toolKey: string; clas
     return { ...p, lang: (row?.lang || lang) as any };
   };
 
-  const remove = async (id: string) => {
-    try { await deleteToolResult({ data: { id } }); setItems((s) => s.filter((x) => x.id !== id)); } catch {}
-  };
-  const clearAll = async () => {
-    try { await clearToolHistory({ data: { toolKey } }); setItems([]); } catch {}
-  };
+
 
   return (
     <div className={`mt-4 rounded-xl border border-border bg-background/40 ${className}`}>
@@ -85,17 +78,10 @@ export function ToolHistory({ toolKey, className = "" }: { toolKey: string; clas
             >
               {busy ? <Loader2 className="size-3 animate-spin" /> : <RefreshCw className="size-3" />} {t("hist_refresh")}
             </button>
-            {items.length > 0 && (
-              <button
-                type="button"
-                onClick={clearAll}
-                className="ms-auto inline-flex items-center gap-1 rounded-lg border border-destructive/40 px-2 py-1 text-[11px] text-destructive transition hover:bg-destructive/10"
-              >
-                <Trash2 className="size-3" /> {t("hist_clear")}
-              </button>
-            )}
+
           </div>
 
+          <p className="mb-2 text-[10px] text-muted-foreground">{lang === "en" ? "Deletion is disabled to preserve history." : lang === "ku" ? "سڕینەوە بۆ پاراستنی مێژوو ناچالاک کراوە." : "تم إيقاف الحذف للحفاظ على السجل."}</p>
           {items.length === 0 ? (
             <p className="py-2 text-center text-[11px] text-muted-foreground">{t("hist_empty")}</p>
           ) : (
@@ -109,15 +95,7 @@ export function ToolHistory({ toolKey, className = "" }: { toolKey: string; clas
                     </div>
                   </div>
                   <ExportButtons toolKey={toolKey} size="xs" build={buildFor(it.id) as any} />
-                  <button
-                    type="button"
-                    onClick={() => remove(it.id)}
-                    aria-label={t("hist_delete")}
-                    title={t("hist_delete")}
-                    className="rounded-lg border border-border p-1 text-muted-foreground transition hover:border-destructive/40 hover:text-destructive"
-                  >
-                    <Trash2 className="size-3.5" />
-                  </button>
+
                 </li>
               ))}
             </ul>

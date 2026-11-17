@@ -32,7 +32,7 @@ import { domainsInText } from "@/lib/knowledge-facts";
 import { OnboardingTour } from "@/components/workspace/OnboardingTour";
 import { DelegatedBrowserPanel } from "@/components/workspace/DelegatedBrowserPanel";
 import { WorkspaceShell, formatElapsed, NavLink, MORE_ITEMS, type WorkspaceTab } from "@/components/workspace/WorkspaceShell";
-import { HistoryPanel, BalancePanel, KnowledgePanel, type PastJob } from "@/components/workspace/WorkspacePanels";
+import { HistoryPanel, KnowledgePanel, type PastJob } from "@/components/workspace/WorkspacePanels";
 import { supabase } from "@/integrations/supabase/client";
 import { resolveInterfacePolicy } from "@/lib/interface-policy";
 import { ENGINE_LIST } from "@/lib/ai-engines";
@@ -44,6 +44,7 @@ import { PulseBadge } from "@/components/motion/effects";
 import { useRotatingHint } from "@/lib/workspace-hints";
 import { WorkspaceAuditPulse } from "@/components/WorkspaceAuditPulse";
 import { SecurityScanCard } from "@/components/SecurityScanCard";
+import { ReportsPanel } from "@/components/workspace/ReportsPanel";
 import { WorkspaceSpacesPanel } from "@/components/WorkspaceSpacesPanel";
 import { OnboardingWizard } from "@/components/workspace/OnboardingWizard";
 import { resolveSkillAccessPolicy, normalizePlanAccessKey } from "@/lib/maaroof/skill-access-policy";
@@ -198,7 +199,7 @@ function WorkspacePage() {
   const [policy, setPolicy] = useState<{ enabled: boolean; available_interfaces: string[]; default_ui: "workbench" | "professional"; show_professional_link: boolean; allowed_modes: Array<"execution" | "recommendation" | "simulation">; show_live_engine_picker: boolean; enabled_skills: string[]; skill_access: Record<string, "self_service" | "contact" | "disabled"> }>({ enabled: true, available_interfaces: ["workbench", "professional"], default_ui: "workbench", show_professional_link: true, allowed_modes: ["execution", "recommendation", "simulation"], show_live_engine_picker: true, enabled_skills: MAAROOF_SKILLS.map(skill => skill.key), skill_access: defaultSkillAccessPolicy() });
   const watcherRef = useState<{ current: number }>({ current: 0 })[0];
   const search = Route.useSearch();
-  const TABS: WorkspaceTab[] = ["main", "history", "balance", "knowledge", "interview", "pulse", "models", "settings", "browser", "skills", "tools", "extras", "more"];
+  const TABS: WorkspaceTab[] = ["main", "history", "balance", "knowledge", "interview", "pulse", "models", "settings", "browser", "skills", "tools", "extras", "reports", "more"];
   const legacyTab = search.tab === "ops" || search.tab === "channels" ? "extras" : search.tab === "approvals" ? "interview" : search.tab;
   const tab: WorkspaceTab = TABS.includes(legacyTab as WorkspaceTab) ? (legacyTab as WorkspaceTab) : "main";
   const goMain = () => navigate({ to: "/workspace", search: {} });
@@ -659,8 +660,8 @@ function WorkspacePage() {
       <OnboardingTour lang={locale} />
       <WorkspaceShell locale={locale} tab={tab} autoCollapse={running}>
       <div className={`maaroof-workspace-switcher-wrap px-4 pt-4 md:px-0 ${tab === "main" ? "is-main-chat-switcher" : ""}`}><WorkspaceSwitcher onChange={handleWorkspaceChange} disabled={running} /></div>
+      {tab === "reports" && <div className="px-4 py-6 md:px-0 md:py-10"><ReportsPanel lang={locale} workspaceId={activeWorkspaceId} /></div>}
       {tab === "history" && <div className="px-4 py-6 md:px-0 md:py-10"><HistoryPanel lang={locale} workspaceId={activeWorkspaceId} onOpen={(j) => void openPastJob(j)} onContinue={continuePastJob} /></div>}
-      {tab === "balance" && <div className="px-4 py-6 md:px-0 md:py-10"><BalancePanel lang={locale} /></div>}
       {tab === "knowledge" && <div className="px-4 py-6 md:px-0 md:py-10"><KnowledgePanel lang={locale} workspaceId={activeWorkspaceId} /><KnownFactsPanel lang={locale} workspaceId={activeWorkspaceId} /><BroadcastPanel lang={locale} workspaceId={activeWorkspaceId} />{canUseKnowledgeSpaces && <section className="mt-4 rounded-2xl border border-border bg-card p-5"><Suspense fallback={null}><LazyKnowledgeSpaces userId={user?.id ?? null} workspaceId={activeWorkspaceId} /></Suspense></section>}</div>}
       {tab === "interview" && <div className="px-4 py-6 md:px-0 md:py-10"><OnboardingWizard lang={locale as any} workspaceId={activeWorkspaceId} /><WorkspaceAccountPanel workspace={activeWorkspace} lang={locale} onSaved={(saved) => setActiveWorkspace(saved as Workspace)} /><WorkspaceSpacesPanel lang={locale} workspaceId={activeWorkspaceId} /><div className="mt-4"><AttachmentAnalyzer lang={locale} context="interview" /></div><section className="mt-4 rounded-2xl border border-border bg-card p-5"><h2 className="mb-1 font-semibold">{locale === "en" ? "Approvals" : locale === "ku" ? "ڕەزامەندییەکان" : "الموافقات"}</h2><p className="mb-3 text-xs text-muted-foreground">{locale === "en" ? "Actions waiting for your decision before Maaroof runs them." : locale === "ku" ? "کردارەکان چاوەڕێی بڕیاری تۆن." : "إجراءات تنتظر قرارك قبل أن ينفذها معروف."}</p><Suspense fallback={null}><LazyApprovals /></Suspense></section><section className="mt-4 rounded-2xl border border-primary/20 bg-primary/5 p-5"><h2 className="font-semibold">{locale === "en" ? "Teach once, work forever" : locale === "ku" ? "جارێک فێرم بکە" : "علّمني مرة… أعمل للأبد"}</h2><p className="mt-1 text-xs text-muted-foreground">{locale === "en" ? "What you teach Maaroof here is saved in the Knowledge space and reused in every task for this account." : locale === "ku" ? "ئەوەی فێری معروفی دەکەیت لە شوێنی زانیاری پاشەکەوت دەکرێت." : "ما تعلّمه لمعروف يُحفظ في مساحة المعرفة ويُستخدم في كل مهمة حسب طبيعة حسابك."}</p><KnownFactsPanel lang={locale} workspaceId={activeWorkspaceId} /></section></div>}
       {tab === "pulse" && <div className="px-4 py-6 md:px-0 md:py-10"><WorkspaceAuditPulse lang={locale} workspaceId={activeWorkspaceId} onTask={(text) => { setGoal(text); goMain(); }} /><SecurityScanCard lang={locale} /></div>}

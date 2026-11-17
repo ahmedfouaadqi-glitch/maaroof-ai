@@ -1,23 +1,24 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Sparkles, Share2, PanelRightClose, PanelRightOpen, BrainCircuit, History, Wallet, Settings, Brain, MessagesSquare, Activity, Cpu, LayoutGrid, Globe, Wrench } from "lucide-react";
+import { Sparkles, Share2, PanelRightClose, PanelRightOpen, BrainCircuit, History, Settings, Brain, MessagesSquare, Activity, Cpu, LayoutGrid, Globe, Wrench, FileText } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 type Locale = "ar" | "en" | "ku";
-export type WorkspaceTab = "main" | "history" | "balance" | "knowledge" | "interview" | "pulse" | "models" | "settings" | "browser" | "skills" | "tools" | "extras" | "more";
+export type WorkspaceTab = "main" | "history" | "balance" | "knowledge" | "interview" | "pulse" | "models" | "settings" | "browser" | "skills" | "tools" | "extras" | "reports" | "more";
 
 type NavItem = { tab?: WorkspaceTab; to?: "/profile"; icon: any; label: Record<Locale, string> };
 
+// Owner workspace navigation omits balance/subscription surfaces; accounting data and token logic remain intact.
 const NAV: NavItem[] = [
   { tab: "main", icon: BrainCircuit, label: { ar: "مساحة معروف", en: "Maaroof Space", ku: "شوێنی معروف" } },
   { tab: "tools", icon: Wrench, label: { ar: "الأدوات المباشرة", en: "Direct tools", ku: "ئامرازەکان" } },
   { tab: "history", icon: History, label: { ar: "المهام السابقة", en: "Previous tasks", ku: "ئەرکە پێشووەکان" } },
-  { tab: "balance", icon: Wallet, label: { ar: "الرصيد", en: "Balance", ku: "باڵانس" } },
   { tab: "knowledge", icon: Brain, label: { ar: "مساحة المعرفة", en: "Knowledge", ku: "زانیاری" } },
   { tab: "interview", icon: MessagesSquare, label: { ar: "المقابلة", en: "Interview", ku: "چاوپێکەوتن" } },
   { tab: "pulse", icon: Activity, label: { ar: "نبض حسابك", en: "Account pulse", ku: "لێدانی هەژمار" } },
   { tab: "models", icon: Cpu, label: { ar: "اختيار النماذج", en: "Models", ku: "مۆدێلەکان" } },
   { tab: "browser", icon: Globe, label: { ar: "المتصفح المفوّض", en: "Delegated browser", ku: "وێبگەڕی ڕێگەپێدراو" } },
   { tab: "skills", icon: Sparkles, label: { ar: "المهارات", en: "Skills", ku: "کارامەییەکان" } },
+  { tab: "reports", icon: FileText, label: { ar: "مركز التقارير", en: "Reports Center", ku: "ناوەندی ڕاپۆرت" } },
   { tab: "extras", icon: Share2, label: { ar: "الإضافات", en: "Add-ons", ku: "زیادکراوەکان" } },
   { tab: "settings", icon: Settings, label: { ar: "الإعدادات", en: "Settings", ku: "ڕێکخستن" } },
 ];
@@ -42,7 +43,7 @@ export function WorkspaceShell({ locale, tab, children, autoCollapse = false }: 
       </aside>
       <div className={`maaroof-workspace-content min-w-0 flex-1 pb-28 md:pb-0 ${tab === "main" ? "is-main-workspace-content" : ""}`}>{children}</div>
       <nav className="fixed inset-x-3 bottom-3 z-40 flex rounded-2xl border border-border bg-card/90 shadow-lg backdrop-blur-md md:hidden">
-        {[...NAV.slice(0, 4), MORE].map((n) => <NavLink key={n.tab || n.to} n={n} locale={locale} on={tab === n.tab || (n.tab === "more" && ["interview", "pulse", "models", "browser", "skills", "extras", "settings"].includes(tab))} compact />)}
+        {[...NAV.slice(0, 4), MORE].map((n) => <NavLink key={n.tab || n.to} n={n} locale={locale} on={tab === n.tab || (n.tab === "more" && ["interview", "pulse", "models", "browser", "skills", "reports", "extras", "settings"].includes(tab))} compact />)}
       </nav>
     </div>
   );

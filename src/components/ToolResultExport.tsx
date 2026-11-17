@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useI18n } from "@/lib/i18n";
 import { ExportButtons } from "@/components/ExportButtons";
-import { payloadFromResult, useCaptureToolResult } from "@/lib/export-bus";
+import { payloadFromResult, useActiveWorkspaceId, useCaptureToolResult } from "@/lib/export-bus";
 import { TOOL_CATALOG } from "@/lib/tool-catalog";
 import type { ExportPayload } from "@/lib/exports";
 import { saveToolResult } from "@/lib/tool-history.functions";
+import { saveExecutiveReport } from "@/lib/reports/reports.functions";
+import { toast } from "sonner";
 
 function fingerprint(s: string): string {
   let h = 5381;
@@ -35,6 +37,7 @@ export function ToolResultExport({
   size?: "sm" | "xs";
 }) {
   const { lang } = useI18n();
+  const workspaceId = useActiveWorkspaceId();
   const tool = TOOL_CATALOG.find((x) => x.key === toolKey);
   const label = title || (tool?.labels as any)?.[lang] || tool?.labels?.en || toolKey;
 
@@ -49,7 +52,7 @@ export function ToolResultExport({
     }
   }, [build, result, label, subtitle]);
 
-  useCaptureToolResult(toolKey, label, payload ? { ...payload, lang: lang as any } : null);
+  useCaptureToolResult(toolKey, label, payload ? { ...payload, lang: lang as any } : null, workspaceId);
 
   // Persist every distinct result into the user's per-tool history (silent on failure).
   const lastSaved = useRef<string>("");
@@ -65,12 +68,24 @@ export function ToolResultExport({
   }, [payload, toolKey, label, lang]);
 
   if (!payload) return null;
+  const saveLabel = lang === "en" ? "Save as executive report" : lang === "ku" ? "پاشەکەوت وەک ڕاپۆرت" : "حفظ كتقرير تنفيذي";
+  const onSaveReport = async () => {
+    if (!workspaceId) return;
+    try {
+      const p = build ? build() : payload;
+      await saveExecutiveReport({ data: { workspaceId, toolKey, lang: lang as any, payload: p as any } });
+      toast.success(lang === "en" ? "Saved to Reports Center" : lang === "ku" ? "لە ناوەندی ڕاپۆرت پاشەکەوت کرا" : "حُفظ في مركز التقارير");
+    } catch { toast.error(lang === "en" ? "Could not save the report" : "تعذّر حفظ التقرير"); }
+  };
   return (
-    <ExportButtons
-      toolKey={toolKey}
-      size={size}
-      className={className}
-      build={() => (build ? build() : payload)}
-    />
+    <div className="flex flex-wrap items-center gap-2">
+      <ExportButtons
+        toolKey={toolKey}
+        size={size}
+        className={className}
+        build={() => (build ? build() : payload)}
+      />
+      {workspaceId && <button type="button" onClick={() => void onSaveReport()} className="rounded-md border border-border px-2 py-1 text-xs hover:bg-muted">{saveLabel}</button>}
+    </div>
   );
 }

@@ -1,0 +1,3 @@
+import {describe,expect,it} from "vitest";
+import {generateReportShareHash,verifyReportShareHash} from "../share-token";
+describe("report share hash",()=>{const salt="0123456789abcdef0123456789abcdef";it("binds the token to report, workspace and salt",()=>{const token=generateReportShareHash("r1","w1",salt);expect(verifyReportShareHash(token,"r1","w1",salt)).toBe(true);expect(verifyReportShareHash(token,"r2","w1",salt)).toBe(false);expect(verifyReportShareHash(token,"r1","w2",salt)).toBe(false);});it("rejects malformed tokens and weak salts",()=>{expect(verifyReportShareHash("bad","r1","w1",salt)).toBe(false);expect(()=>generateReportShareHash("r1","w1","weak")).toThrow("invalid_share_hash_input");});});

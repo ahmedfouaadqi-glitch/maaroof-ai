@@ -45,6 +45,17 @@ describe("execution evidence pack", () => {
     expect(pack.text).toContain("omitted");
   });
 
+  it("reports failed-step summaries omitted by the character budget", () => {
+    const results = Array.from({ length: 20 }, (_, i) => ({
+      tool: "failed_" + i, ok: false, output: { error: "x".repeat(500) },
+    }));
+    const pack = buildExecutionEvidencePack("Many failures", results, { maxChars: 1200 });
+    expect(pack.failed).toBe(20);
+    expect(pack.omittedFailed).toBeGreaterThan(0);
+    expect(pack.text).toContain("failed/skipped step summary");
+    expect(pack.text.length).toBeLessThanOrEqual(1200);
+  });
+
   it("handles empty results without inventing evidence", () => {
     const pack = buildExecutionEvidencePack("No execution", []);
     expect(pack.included).toBe(0);

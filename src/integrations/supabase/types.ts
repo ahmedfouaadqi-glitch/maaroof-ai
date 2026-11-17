@@ -4948,6 +4948,44 @@ export type Database = {
         }
         Relationships: []
       }
+      report_branding: {
+        Row: {
+          brand_color: string | null
+          company_name: string | null
+          contact: Json
+          logo_url: string | null
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          brand_color?: string | null
+          company_name?: string | null
+          contact?: Json
+          logo_url?: string | null
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          brand_color?: string | null
+          company_name?: string | null
+          contact?: Json
+          logo_url?: string | null
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_branding_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_drafts: {
         Row: {
           created_at: string
@@ -4978,6 +5016,44 @@ export type Database = {
         }
         Relationships: []
       }
+      report_share_grants: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          report_id: string
+          revoked_at: string | null
+          token_hash: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          report_id: string
+          revoked_at?: string | null
+          token_hash: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          report_id?: string
+          revoked_at?: string | null
+          token_hash?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_share_grants_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "reports"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       report_templates: {
         Row: {
           config: Json
@@ -5004,6 +5080,62 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      reports: {
+        Row: {
+          created_at: string
+          html: string
+          id: string
+          kind: string
+          lang: string
+          payload: Json
+          status: string
+          title: string
+          tool_key: string | null
+          updated_at: string
+          user_id: string
+          version: number
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          html: string
+          id?: string
+          kind?: string
+          lang?: string
+          payload?: Json
+          status?: string
+          title: string
+          tool_key?: string | null
+          updated_at?: string
+          user_id: string
+          version?: number
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          html?: string
+          id?: string
+          kind?: string
+          lang?: string
+          payload?: Json
+          status?: string
+          title?: string
+          tool_key?: string | null
+          updated_at?: string
+          user_id?: string
+          version?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reports_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       site_content: {
         Row: {
@@ -6482,6 +6614,14 @@ export type Database = {
       generate_username_from_email: {
         Args: { _email: string }
         Returns: string
+      }
+      get_shared_report: {
+        Args: { _token_hash: string }
+        Returns: {
+          html: string
+          lang: string
+          title: string
+        }[]
       }
       has_role: {
         Args: {

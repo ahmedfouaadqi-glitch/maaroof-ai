@@ -68,6 +68,7 @@ import { Route as MaaroofMemoryRouteImport } from './routes/maaroof.memory'
 import { Route as PSlugRouteImport } from './routes/p.$slug'
 import { Route as ToolsSlugRouteImport } from './routes/tools.$slug'
 import { Route as UUsernameRouteImport } from './routes/u.$username'
+import { Route as ReportsShareTokenRouteImport } from './routes/reports/share/$token'
 import { Route as ApiPublicBrandSlugRouteImport } from './routes/api/public/brand/$slug'
 import { Route as ApiPublicHooksAgentRunnerRouteImport } from './routes/api/public/hooks/agent-runner'
 import { Route as ApiPublicTelegramWebhookRouteImport } from './routes/api/public/telegram/webhook'
@@ -371,6 +372,11 @@ const UUsernameRoute = UUsernameRouteImport.update({
   path: '/u/$username',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReportsShareTokenRoute = ReportsShareTokenRouteImport.update({
+  id: '/reports/share/$token',
+  path: '/reports/share/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicBrandSlugRoute = ApiPublicBrandSlugRouteImport.update({
   id: '/api/public/brand/$slug',
   path: '/api/public/brand/$slug',
@@ -465,6 +471,7 @@ export interface FileRoutesByFullPath {
   '/p/$slug': typeof PSlugRoute
   '/tools/$slug': typeof ToolsSlugRoute
   '/u/$username': typeof UUsernameRoute
+  '/reports/share/$token': typeof ReportsShareTokenRoute
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
@@ -532,6 +539,7 @@ export interface FileRoutesByTo {
   '/p/$slug': typeof PSlugRoute
   '/tools/$slug': typeof ToolsSlugRoute
   '/u/$username': typeof UUsernameRoute
+  '/reports/share/$token': typeof ReportsShareTokenRoute
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
@@ -600,6 +608,7 @@ export interface FileRoutesById {
   '/p/$slug': typeof PSlugRoute
   '/tools/$slug': typeof ToolsSlugRoute
   '/u/$username': typeof UUsernameRoute
+  '/reports/share/$token': typeof ReportsShareTokenRoute
   '/api/public/brand/$slug': typeof ApiPublicBrandSlugRoute
   '/api/public/hooks/agent-runner': typeof ApiPublicHooksAgentRunnerRoute
   '/api/public/telegram/webhook': typeof ApiPublicTelegramWebhookRoute
@@ -669,6 +678,7 @@ export interface FileRouteTypes {
     | '/p/$slug'
     | '/tools/$slug'
     | '/u/$username'
+    | '/reports/share/$token'
     | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
     | '/api/public/telegram/webhook'
@@ -736,6 +746,7 @@ export interface FileRouteTypes {
     | '/p/$slug'
     | '/tools/$slug'
     | '/u/$username'
+    | '/reports/share/$token'
     | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
     | '/api/public/telegram/webhook'
@@ -803,6 +814,7 @@ export interface FileRouteTypes {
     | '/p/$slug'
     | '/tools/$slug'
     | '/u/$username'
+    | '/reports/share/$token'
     | '/api/public/brand/$slug'
     | '/api/public/hooks/agent-runner'
     | '/api/public/telegram/webhook'
@@ -867,6 +879,7 @@ export interface RootRouteChildren {
   PSlugRoute: typeof PSlugRoute
   ToolsSlugRoute: typeof ToolsSlugRoute
   UUsernameRoute: typeof UUsernameRoute
+  ReportsShareTokenRoute: typeof ReportsShareTokenRoute
   ApiPublicBrandSlugRoute: typeof ApiPublicBrandSlugRoute
   ApiPublicHooksAgentRunnerRoute: typeof ApiPublicHooksAgentRunnerRoute
   ApiPublicTelegramWebhookRoute: typeof ApiPublicTelegramWebhookRoute
@@ -1290,6 +1303,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UUsernameRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reports/share/$token': {
+      id: '/reports/share/$token'
+      path: '/reports/share/$token'
+      fullPath: '/reports/share/$token'
+      preLoaderRoute: typeof ReportsShareTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/brand/$slug': {
       id: '/api/public/brand/$slug'
       path: '/api/public/brand/$slug'
@@ -1416,6 +1436,7 @@ const rootRouteChildren: RootRouteChildren = {
   PSlugRoute: PSlugRoute,
   ToolsSlugRoute: ToolsSlugRoute,
   UUsernameRoute: UUsernameRoute,
+  ReportsShareTokenRoute: ReportsShareTokenRoute,
   ApiPublicBrandSlugRoute: ApiPublicBrandSlugRoute,
   ApiPublicHooksAgentRunnerRoute: ApiPublicHooksAgentRunnerRoute,
   ApiPublicTelegramWebhookRoute: ApiPublicTelegramWebhookRoute,

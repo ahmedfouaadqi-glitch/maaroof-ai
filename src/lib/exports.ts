@@ -5,6 +5,7 @@
  */
 import maaroofLogo from "@/assets/maaroof-ai-logo.png";
 import { sanitizeDeep } from "@/lib/brand-sanitize";
+import { sanitizeWorksheetName } from "@/lib/export-worksheet-name";
 
 export type ExportLang = "ar" | "en" | "ku";
 
@@ -539,7 +540,7 @@ export async function exportToExcel(payload: ExportPayload) {
     for (let i = 0; i < 6; i++) {
       const section = sections[i];
       const fallbackHeading = lang === "en" ? "Sheet " + (i + 1) : lang === "ku" ? "پەڕە " + (i + 1) : "ورقة " + (i + 1);
-      const requested = (section?.heading || fallbackHeading).slice(0, 31).trim() || fallbackHeading;
+      const requested = sanitizeWorksheetName(section?.heading || fallbackHeading, fallbackHeading);
       let name = requested;
       let suffix = 2;
       while (used.has(name)) {
@@ -578,7 +579,7 @@ export async function exportToExcel(payload: ExportPayload) {
   workbook.subject = payload.title;
   const logoData = await optionalLogo(payload);
   const createUniqueSheetName = (requested: string) => {
-    const base = requested.slice(0, 31).replace(/[\\/?*\[\]:]/g, "_").trim() || "Data";
+    const base = sanitizeWorksheetName(requested);
     let candidate = base;
     let suffix = 2;
     while (workbook.getWorksheet(candidate)) {

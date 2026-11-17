@@ -2,8 +2,8 @@
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { useServerFn } from "@tanstack/react-start";
-import { Building2, Plus, Check, Loader2, Trash2 } from "lucide-react";
-import { listWorkspaces, createWorkspace, deleteWorkspace } from "@/lib/workspaces.functions";
+import { Building2, Plus, Check, Loader2 } from "lucide-react";
+import { listWorkspaces, createWorkspace } from "@/lib/workspaces.functions";
 
 export type Workspace = {
   id: string;
@@ -29,7 +29,6 @@ export function WorkspaceSwitcher({ onChange, disabled = false }: { onChange: (w
   const { t, lang } = useI18n();
   const list = useServerFn(listWorkspaces);
   const create = useServerFn(createWorkspace);
-  const del = useServerFn(deleteWorkspace);
   const [items, setItems] = useState<Workspace[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -109,14 +108,6 @@ export function WorkspaceSwitcher({ onChange, disabled = false }: { onChange: (w
     }
   }
 
-  async function remove(id: string) {
-    if (!confirm(t("auto.delete_workspace_sessions_and_memory_within"))) return;
-    await del({ data: { id } });
-    const next = items.filter((w) => w.id !== id);
-    setItems(next);
-    if (activeId === id) pick(next[0] || null);
-  }
-
   return (
     <div className={`rounded-lg border bg-card p-3 space-y-2 ${disabled ? "opacity-60 pointer-events-none" : ""}`}>
       <h2 className="flex items-center justify-between gap-2 font-semibold text-base m-0">
@@ -125,6 +116,7 @@ export function WorkspaceSwitcher({ onChange, disabled = false }: { onChange: (w
       </h2>
 
 
+      <p className="text-[10px] text-muted-foreground">{copy("الحذف موقوف للحفاظ على سجل المساحات.", "Workspace deletion is disabled to preserve history.", "سڕینەوە بۆ پاراستنی مێژووی شوێنەکان ناچالاک کراوە.")}</p>
       {showForm && (
         <div className="space-y-3 rounded-xl border border-border bg-background/70 p-3">
           <p className="text-xs text-muted-foreground">{copy("اختر نوع مساحة العمل؛ سيُحفظ لكل نوع سياقه وذاكرته وتقاريره الخاصة.", "Choose a workspace type. Its context, memory, and reports will remain scoped to it.", "جۆری شوێنی کار هەڵبژێرە؛ پاشبنەما و بیرگە و ڕاپۆرتەکانی تایبەتی دەبن.")}</p>
@@ -182,11 +174,6 @@ export function WorkspaceSwitcher({ onChange, disabled = false }: { onChange: (w
               return <option key={w.id} value={w.id}>{`${w.name} — ${kindLabel}${host}`}</option>;
             })}
           </select>
-          {activeId && (
-            <button type="button" onClick={() => void remove(activeId)} className="rounded-lg p-2 text-destructive hover:bg-destructive/10" title={t("auto.delete")} aria-label={t("auto.delete")}>
-              <Trash2 className="w-4 h-4" />
-            </button>
-          )}
           {items.length === 0 && <span className="text-xs text-muted-foreground">{t("auto.no_spaces_yet_create_the_first")}</span>}
         </div>
       )}
