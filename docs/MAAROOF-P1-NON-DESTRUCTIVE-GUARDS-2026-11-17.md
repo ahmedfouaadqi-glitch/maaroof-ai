@@ -15,7 +15,7 @@
 3. Removed automatic pruning of historical tool results after the 50-row threshold in `src/lib/tool-history.functions.ts`. The 50-row default list limit remains a presentation/retrieval limit; it no longer triggers deletion.
 4. Changed the existing server actions for deleting one result and clearing a tool's history to reject the operation before any handler-level data access.
 5. Changed the workspace deletion server action to reject the operation before any handler-level data access.
-6. Removed the destructive controls from `ToolHistory` and `WorkspaceSpacesPanel`, while preserving history viewing and export controls.
+6. Removed the destructive controls from `ToolHistory`, `WorkspaceSpacesPanel`, and `WorkspaceSwitcher`, while preserving history viewing, workspace selection, creation, and export controls.
 7. Added Arabic, English and Kurdish explanatory notices in the affected interfaces.
 
 ## Verification
