@@ -307,19 +307,22 @@ export function ReportBuilder() {
           <ExportButtons build={payload} />
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <input value={tplName} onChange={(e) => setTplName(e.target.value)} placeholder={t("report_tpl_name_ph")} className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs" />
-          <button onClick={saveTemplate} disabled={!tplName.trim()} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs text-primary disabled:opacity-50">
-            <Save className="size-3"/> {t("report_tpl_save")}
-          </button>
-          <p className="text-[10px] text-muted-foreground">{lang === "en" ? "Template deletion is disabled to preserve saved configurations." : lang === "ku" ? "سڕینەوەی قاڵب بۆ پاراستنی ڕێکخستنە پاشەکەوتکراوەکان ناچالاک کراوە." : "تم إيقاف حذف القوالب للحفاظ على الإعدادات المحفوظة."}</p>
-          {templates.map((tpl) => (
-            <span key={tpl.id} className="inline-flex items-center gap-1 rounded-full border border-border bg-background/60 px-2 py-0.5 text-[11px]">
-              <button onClick={() => applyTemplate(tpl)} className="hover:text-primary">{tpl.name}</button>
-
-            </span>
-          ))}
-        </div>
+        {activeWorkspaceId === null ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <input value={tplName} onChange={(e) => setTplName(e.target.value)} placeholder={t("report_tpl_name_ph")} className="rounded-lg border border-border bg-background px-3 py-1.5 text-xs" />
+            <button onClick={saveTemplate} disabled={!tplName.trim()} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs text-primary disabled:opacity-50">
+              <Save className="size-3"/> {t("report_tpl_save")}
+            </button>
+            <p className="text-[10px] text-muted-foreground">{lang === "en" ? "Template deletion is disabled to preserve saved configurations." : lang === "ku" ? "سڕینەوەی قاڵب بۆ پاراستنی ڕێکخستنە پاشەکەوتکراوەکان ناچالاک کراوە." : "تم إيقاف حذف القوالب للحفاظ على الإعدادات المحفوظة."}</p>
+            {templates.map((tpl) => (
+              <span key={tpl.id} className="inline-flex items-center gap-1 rounded-full border border-border bg-background/60 px-2 py-0.5 text-[11px]">
+                <button onClick={() => applyTemplate(tpl)} className="hover:text-primary">{tpl.name}</button>
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 text-[11px] text-muted-foreground">{lang === "en" ? "Saved templates are not shown in client workspaces until workspace-scoped persistence is available." : lang === "ku" ? "قاڵبە پاشەکەوتکراوەکان لە شوێنی کڕیار نیشان نادرێن تا خەزنکردنی تایبەت بە شوێن بەردەست بێت." : "قوالب الحساب الأساسية مخفية داخل مساحات العملاء حتى يتوفر تخزين مستقل لكل مساحة."}</p>
+        )}
       </div>
 
       {/* Visual preview */}
