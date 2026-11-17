@@ -72,12 +72,21 @@ export function HistoryPanel({ lang, workspaceId, onOpen, onContinue }: { lang: 
   const buildExport = (j: PastJob) => async () => {
     const t = await token();
     // The archived job's own workspace is authoritative; the user may have switched workspaces since it ran.
-    const query = new URLSearchParams({ id: j.id, after: "0", workspace_id: j.workspace_id ?? "" });
-    const r = await fetch("/api/maaroof-jobs?" + query.toString(), { headers: { Authorization: "Bearer " + t }, cache: "no-store" });
-    if (!r.ok) throw new Error("task_events_unavailable");
-    const b = await r.json();
-    if (b?.error || !Array.isArray(b?.events)) throw new Error("task_events_unavailable");
-    return buildTaskHistoryExportPayload(j, b.events, lang);
+    const events: any[] = [];
+    let after = 0;
+    while (true) {
+      const query = new URLSearchParams({ id: j.id, after: String(after), event_limit: "1000", workspace_id: j.workspace_id ?? "" });
+      const r = await fetch("/api/maaroof-jobs?" + query.toString(), { headers: { Authorization: "Bearer " + t }, cache: "no-store" });
+      if (!r.ok) throw new Error("task_events_unavailable");
+      const b = await r.json();
+      if (b?.error || !Array.isArray(b?.events)) throw new Error("task_events_unavailable");
+      events.push(...b.events);
+      if (b.has_more_events !== true) break;
+      const nextAfter = Number(b.next_after);
+      if (!Number.isFinite(nextAfter) || nextAfter <= after) throw new Error("task_events_pagination_invalid");
+      after = nextAfter;
+    }
+    return buildTaskHistoryExportPayload(j, events, lang);
   };
 
   return (
