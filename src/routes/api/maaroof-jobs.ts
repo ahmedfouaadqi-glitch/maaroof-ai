@@ -2,6 +2,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { isMissingWorkspaceIdColumn, isStaleJob, isTerminalJobStatus, parseAfter } from "@/lib/maaroof/jobs";
+import { jobPageWindow, splitPage } from "@/lib/maaroof/job-pagination";
 
 async function auth(request: Request) {
   const h = request.headers.get("authorization") || "";
@@ -21,6 +22,7 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
         const url = new URL(request.url);
         const id = url.searchParams.get("id");
         const allWorkspaces = url.searchParams.get("all_workspaces") === "1";
+        const { page, pageSize, from, to } = jobPageWindow(url.searchParams.get("page"), url.searchParams.get("page_size"));
         const workspaceRaw = url.searchParams.get("workspace_id");
         let workspaceId: string | null = null;
         if (workspaceRaw) {
@@ -34,22 +36,24 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
           const legacyColumns = "id, goal, mode, status, error, request_payload, created_at, updated_at";
           let q = db.from("maaroof_jobs").select(columns).eq("user_id", a.userId);
           if (!allWorkspaces) q = workspaceId ? q.eq("workspace_id", workspaceId) : q.is("workspace_id", null);
-          let { data: jobs, error: scopedError } = await q.order("created_at", { ascending: false }).limit(1000);
+          let { data: jobRows, error: scopedError } = await q.order("created_at", { ascending: false }).range(from, to);
           if (scopedError) {
             // Never widen a workspace-scoped request to every workspace after a schema/query error.
             if (allWorkspaces && isMissingWorkspaceIdColumn(scopedError)) {
-              const fallback = await db.from("maaroof_jobs").select(legacyColumns).eq("user_id", a.userId).order("created_at", { ascending: false }).limit(1000);
+              const fallback = await db.from("maaroof_jobs").select(legacyColumns).eq("user_id", a.userId).order("created_at", { ascending: false }).range(from, to);
               if (fallback.error) {
                 console.error("[maaroof-jobs] legacy owner-wide list failed", fallback.error.message);
                 return Response.json({ jobs: [], degraded: true, error: "jobs_unavailable" }, { status: 503 });
               }
-              return Response.json({ jobs: fallback.data || [], scope_fallback: true, workspace_scope_unavailable: true });
+              const pageResult = splitPage(fallback.data, pageSize);
+              return Response.json({ jobs: pageResult.items, page, page_size: pageSize, has_more: pageResult.hasMore, next_page: pageResult.hasMore ? page + 1 : null, scope_fallback: true, workspace_scope_unavailable: true });
             }
             const code = isMissingWorkspaceIdColumn(scopedError) ? "workspace_scope_unavailable" : "jobs_unavailable";
             console.error("[maaroof-jobs] scoped list failed without widening scope", scopedError.message);
             return Response.json({ jobs: [], degraded: true, error: code }, { status: 503 });
           }
-          return Response.json({ jobs: jobs || [], scope_fallback: false });
+          const pageResult = splitPage(jobRows, pageSize);
+          return Response.json({ jobs: pageResult.items, page, page_size: pageSize, has_more: pageResult.hasMore, next_page: pageResult.hasMore ? page + 1 : null, scope_fallback: false });
         }
         if (!/^[0-9a-f-]{36}$/i.test(id)) return Response.json({ error: "bad_id" }, { status: 400 });
         const hasWorkspaceScope = url.searchParams.has("workspace_id") && !allWorkspaces;
@@ -98,9 +102,13 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
             }
           }
         }
-        const { data: events } = await db.from("maaroof_job_events").select("seq, event_type, payload, created_at")
-          .eq("job_id", id).gt("seq", parseAfter(url.searchParams.get("after"))).order("seq", { ascending: true }).limit(200);
-        return Response.json({ job, events: events || [] });
+        const eventLimitRaw = Number(url.searchParams.get("event_limit"));
+        const eventLimit = Number.isFinite(eventLimitRaw) ? Math.max(1, Math.min(1000, Math.floor(eventLimitRaw))) : 200;
+        const { data: eventRows } = await db.from("maaroof_job_events").select("seq, event_type, payload, created_at")
+          .eq("job_id", id).gt("seq", parseAfter(url.searchParams.get("after"))).order("seq", { ascending: true }).limit(eventLimit + 1);
+        const eventPage = splitPage(eventRows, eventLimit);
+        const nextAfter = eventPage.hasMore && eventPage.items.length ? Number((eventPage.items[eventPage.items.length - 1] as any).seq) : null;
+        return Response.json({ job, events: eventPage.items, has_more_events: eventPage.hasMore, next_after: nextAfter });
       },
       POST: async ({ request }) => {
         const a = await auth(request);
