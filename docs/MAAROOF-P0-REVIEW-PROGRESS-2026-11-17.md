@@ -271,3 +271,11 @@ The findings and exact evidence classifications are added to the P0 risk registe
 Metadata-only verification confirms the repository is public and its tracked root tree contains `.env` (685 bytes). The tracked `.gitignore` does not ignore `.env`. Git path history shows commits on 2026-05-07 and 2026-06-05. The file content was deliberately not opened or disclosed.
 
 This is a confirmed public-repository exposure of an environment file, not proof that every value is a valid secret. Treat any credentials that may be present as potentially compromised and rotate them through the relevant provider consoles. No rotation, deletion, history rewrite or repository cleanup was performed. R-01 is now Critical and blocks P0 security acceptance until the owner verifies rotation and safe remediation.
+
+## أحدث نقطة تحقق للفرع — 2026-11-17
+
+- الفرع عند الفحص: `e0851cc6cfbb57b00e62d4b3a0fe602afe33b1f3`.
+- مقارنة شجرة Git مع أساس الخطة `e0570879c5b4ca3f238f44e890df4b865da904ff`: 1,023 ملفاً في الأساس، 1,079 ملفاً في الفرع، 58 ملفاً مضافاً، صفر ملفات محذوفة، و40 ملفاً معدلاً. شجرة Git كاملة وغير مقتطعة.
+- تمت مقارنة بصمات الملفات المحمية الإحدى عشرة مع الأساس: **11/11 متطابقة**؛ المقارنة metadata-only، ولم تُفتح محتوياتها.
+- لم تُقرأ محتويات `.env` أو الأسرار. لم يتم اتصال أو استعلام أو تعديل لـ Supabase.
+- هذه النقطة لا تغلق P0؛ ما زال جرد كل المسارات والخدمات، وخريطة الاعتماد، ومصفوفة الميزات، وسجل المخاطر، والاختبارات العملية الشاملة غير مكتمل.
