@@ -3,6 +3,7 @@ import { History, Loader2, RefreshCw, ChevronDown, ChevronUp } from "lucide-reac
 import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { ExportButtons } from "@/components/ExportButtons";
+import { useActiveWorkspaceId } from "@/lib/export-bus";
 import { useExportConfig, useExportOverride, isToolExportEnabled } from "@/lib/content";
 import type { ExportPayload } from "@/lib/exports";
 import {
@@ -18,6 +19,7 @@ export function ToolHistory({ toolKey, className = "" }: { toolKey: string; clas
   let auth: ReturnType<typeof useAuth> | null = null;
   try { auth = useAuth(); } catch {}
   const user = auth?.user;
+  const activeWorkspaceId = useActiveWorkspaceId();
 
   const exportCfg = useExportConfig();
   const override = useExportOverride();
@@ -39,7 +41,9 @@ export function ToolHistory({ toolKey, className = "" }: { toolKey: string; clas
   useEffect(() => { if (open) load(); }, [open, load]);
   useEffect(() => { if (user) load(); /* initial count */ }, [user?.id, load]);
 
-  if (!user) return null;
+  if (!user || activeWorkspaceId === undefined || activeWorkspaceId !== null) return null;
+  // This legacy history table has no verified workspace partition in the current source contract.
+  // Show it only in the main-account context, never inside a client workspace.
   if (override && !override.exports_enabled) return null;
   if (!isToolExportEnabled(exportCfg, toolKey, override)) return null;
 
