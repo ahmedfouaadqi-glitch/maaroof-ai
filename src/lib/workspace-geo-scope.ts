@@ -17,10 +17,10 @@ export function workspaceGeoScope(workspace: any): WorkspaceGeoScope {
   return { scope: "country", country };
 }
 
-export function effectiveWorkspaceGeoScope(
+export function effectiveWorkspaceGeoScope<T extends { scope: string }>(
   workspaceId: string | null | undefined,
   workspace: any,
-  accountScope: WorkspaceGeoScope,
-): WorkspaceGeoScope {
+  accountScope: T,
+): T | WorkspaceGeoScope {
   return workspaceId ? workspaceGeoScope(workspace?.id === workspaceId ? workspace : null) : accountScope;
 }
