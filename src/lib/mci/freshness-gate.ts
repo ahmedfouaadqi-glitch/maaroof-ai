@@ -19,5 +19,6 @@ export function passesFreshness(createdAt: string | Date, cls: FreshnessClass, q
   const ttl = freshnessTtlHours(cls, query);
   if (ttl <= 0) return false;
   const t = new Date(createdAt).getTime();
-  return Number.isFinite(t) && now - t < ttl * 3600_000;
+  const age = now - t;
+  return Number.isFinite(t) && age >= 0 && age < ttl * 3600_000;
 }
