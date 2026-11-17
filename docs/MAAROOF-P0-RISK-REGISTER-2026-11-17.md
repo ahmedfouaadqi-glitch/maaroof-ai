@@ -31,3 +31,33 @@
 
 ## Acceptance note
 This register is incomplete until all permitted routes, components, libraries, tests and dependencies have been inventoried and all excluded controls are explicitly marked. It is a P0 working artifact, not a final security certification.
+
+
+## 6. Additional source-level verification (export, metrics and evidence packing)
+
+### R-11 — Six-sheet XLSX worksheet-name sanitization
+**Reclassified: confirmed static defect in the `six_sheets` branch.**
+- In `src/lib/exports.ts`, the `excelLayout === "six_sheets"` branch truncates headings to 31 characters and resolves duplicate names, but does not replace Excel-forbidden worksheet-name characters `\\ / ? * [ ] :`.
+- The normal multi-sheet path later in the same file uses `createUniqueSheetName`, which does replace those characters.
+- No dedicated export.ts test file was found in the current tree; existing export-format tests do not establish this branch's invalid-name behavior.
+- Runtime failure for a specific input was not executed; the source-level difference is confirmed. Add a shared sanitizer and regression tests in the export implementation phase.
+
+### R-09 — Visibility metric engine/status semantics
+**Reclassified: confirmed implementation behavior; intended contract still needs owner decision.**
+- `calculateVisibilityProbeMetrics` counts any answer with a non-empty `answer` field, regardless of its `status` value.
+- It does not restrict observed answers to the normalized `requestedEngines` set. Therefore an unexpected engine key can increase `answered_engines` and numerator while denominator remains the requested-engine count.
+- Existing tests cover empty answers as failures, but not a non-empty answer with `status: "failed"` or an engine absent from the requested set.
+- Decide whether status is authoritative and whether unexpected engines should be excluded or reported separately; add adversarial tests before modifying metrics.
+
+### R-10 — Explicit negative mention flag precedence
+**Confirmed source behavior; semantic contract unresolved.**
+- `mentioned: false` does not prevent the fallback text matcher from marking an answer as mentioned when the brand string appears in the answer text.
+- Existing tests do not cover this contradictory combination.
+- Define whether an explicit provider boolean overrides text inference or whether text inference is intentionally additive.
+
+### R-12 — Evidence-pack failed-step omission
+**Confirmed static completeness gap.**
+- Failed/skipped step summaries are included only if the full limitations section fits the remaining character budget.
+- If it does not fit, the code does not increment `omitted` or add a limitations-truncated marker; the final omitted note counts successful results only.
+- Existing test covers one small failed step and successful-output overflow, not failure-section overflow.
+- Add an explicit failed-limitations omission count/marker and regression test before relying on this pack as a complete limitations record.
