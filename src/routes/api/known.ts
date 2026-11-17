@@ -12,6 +12,7 @@ import { dedupeCandidates, falsePositiveReason, relationTruth, normalizeDomain, 
 import { recordEvidence } from "@/lib/maaroof/evidence.server";
 import { upsertKnowledgeNode, linkKnowledge } from "@/lib/maaroof/knowledge.server";
 import { loadMciSettings, mciActiveFor, findReusableKnownRun, logMciDecision, getEngineCache, setEngineCache } from "@/lib/mci/resolver.server";
+import { pickWorkspaceId } from "@/lib/workspace-guard.server";
 import { requestFingerprint } from "@/lib/mci/registry";
 
 const LANG: Record<string, string> = {
@@ -169,6 +170,11 @@ export const Route = createFileRoute("/api/known")({
         let body: any = {};
         try { body = await request.json(); } catch {}
           { const _wg = await (await import("@/lib/workspace-guard.server")).workspaceGuard(admin, userId, body); if (_wg) return _wg; }
+        const workspaceId = pickWorkspaceId(body);
+        if (workspaceId) {
+          const { error: workspaceScopeError } = await admin.from("mkd_runs").select("id, workspace_id").eq("user_id", userId).limit(1);
+          if (workspaceScopeError) return Response.json({ error: "workspace_scope_unavailable" }, { status: 503 });
+        }
         const brand = asText(body.brand, 200);
         const website = asText(body.website || body.url, 300);
         const sector = asText(body.sector || body.keywords, 200);
@@ -188,7 +194,7 @@ export const Route = createFileRoute("/api/known")({
         const mciOn = mciActiveFor(mci as any, "known");
         if (mciOn && !force) {
           try {
-            const hit = await findReusableKnownRun(admin, userId, brand, place, depth);
+            const hit = await findReusableKnownRun(admin, userId, brand, place, depth, workspaceId);
             if (hit) {
               const res = { ...hit.summary.result, run_id: hit.id, reused: { from: hit.created_at } };
               const saved = (res.engines_asked?.length || 0) + 1;
@@ -204,9 +210,13 @@ export const Route = createFileRoute("/api/known")({
         if (!chg.ok) return Response.json(chargeFailureBody(chg.reason as any, chg.left), { status: 402 });
 
         const m = describeMarket(scope as any);
-        const { data: run } = await admin.from("mkd_runs").insert({
-          user_id: userId, brand, depth, scope: (scope || {}) as any, status: "running", cost_tokens: (chg as any).tokens || 0,
+        const { data: run, error: runInsertError } = await admin.from("mkd_runs").insert({
+          user_id: userId, workspace_id: workspaceId, brand, depth, scope: (scope || {}) as any, status: "running", cost_tokens: (chg as any).tokens || 0,
         }).select("id").single();
+        if (workspaceId && runInsertError) {
+          console.error("[known] workspace-scoped run persistence failed", runInsertError.message);
+          return Response.json({ error: "workspace_run_persistence_unavailable" }, { status: 503 });
+        }
         const dbRunId = (run as any)?.id as string | undefined;
 
         const enc = new TextEncoder();
