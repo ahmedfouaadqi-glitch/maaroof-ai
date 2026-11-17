@@ -253,3 +253,14 @@ GitHub Actions run `44053173735` completed successfully for head `72b255d61f663b
 - No live/paid probe step was part of this workflow.
 
 This confirms that the documentation-only P0 branch head passes the repository's configured unit-test and production-build workflow. It does not replace the missing semantic inventory, runtime export checks, lint/typecheck checks, or the excluded Supabase/auth/data-boundary verification.
+
+
+## 17. Additional P0 source review — exact behavior verified
+
+Reviewed current branch source and tests for:
+- `src/lib/export-bus.ts`: session-wide module map keyed only by `toolKey`; no owner/workspace scope in captured record.
+- `src/lib/maaroof/visibility-metrics.ts` and its test: non-empty answer filtering; status field not consulted; answer engine not checked against requested set; `mentioned: false` can still be overridden by text matching.
+- `src/lib/maaroof/execution-evidence-pack.ts` and its test: successful-output omissions are counted, but an oversized failed-limitations section can be omitted silently without a corresponding omission count/marker.
+- `src/lib/exports.ts`: the six-sheet XLSX branch truncates names and handles duplicates but omits the forbidden-character sanitization used by the regular workbook branch.
+
+The findings and exact evidence classifications are added to the P0 risk register. No source code was changed. These are P0 audit findings; fixes remain sequenced after the P0 gate and in the relevant implementation phases.
