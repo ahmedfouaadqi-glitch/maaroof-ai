@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createShareGrant, matchesShareToken, shareGrantStatus } from "./share-grant";
+import { createShareGrant, matchesShareToken, shareGrantStatus } from "./share-grant.server";
 
 const input = {
   grantId: "grant-1", reportId: "report-1", reportVersion: 2, reportKind: "client" as const,
