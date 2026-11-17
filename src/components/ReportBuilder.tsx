@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { FileText, Loader2, Save, RefreshCw, Trash2, BarChart3, LineChart as LineIcon, Radar as RadarIcon } from "lucide-react";
+import { FileText, Loader2, Save, RefreshCw, BarChart3, LineChart as LineIcon, Radar as RadarIcon } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import { ExportButtons } from "@/components/ExportButtons";
 import type { ExportPayload } from "@/lib/exports";
 import { useActiveWorkspaceId, useCapturedResults } from "@/lib/export-bus";
+import { blockDestructiveOperation } from "@/lib/non-destructive-mode";
 import { listToolHistory, getToolResult } from "@/lib/tool-history.functions";
 
 import {
@@ -135,9 +136,8 @@ export function ReportBuilder() {
     if (c.title) setTitle(c.title);
     setTimeout(loadData, 50);
   }
-  async function delTemplate(id: string) {
-    await supabase.from("report_templates").delete().eq("id", id);
-    loadTemplates();
+  function delTemplate(_id: string) {
+    blockDestructiveOperation("report_template_delete");
   }
 
   const chartData = useMemo(() => {
@@ -292,10 +292,11 @@ export function ReportBuilder() {
           <button onClick={saveTemplate} disabled={!tplName.trim()} className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/10 px-3 py-1 text-xs text-primary disabled:opacity-50">
             <Save className="size-3"/> {t("report_tpl_save")}
           </button>
+          <p className="text-[10px] text-muted-foreground">{lang === "en" ? "Template deletion is disabled to preserve saved configurations." : lang === "ku" ? "سڕینەوەی قاڵب بۆ پاراستنی ڕێکخستنە پاشەکەوتکراوەکان ناچالاک کراوە." : "تم إيقاف حذف القوالب للحفاظ على الإعدادات المحفوظة."}</p>
           {templates.map((tpl) => (
             <span key={tpl.id} className="inline-flex items-center gap-1 rounded-full border border-border bg-background/60 px-2 py-0.5 text-[11px]">
               <button onClick={() => applyTemplate(tpl)} className="hover:text-primary">{tpl.name}</button>
-              <button onClick={() => delTemplate(tpl.id)} className="text-destructive hover:opacity-70"><Trash2 className="size-3"/></button>
+
             </span>
           ))}
         </div>
