@@ -39,6 +39,7 @@ import { buildExecutionBatches } from "./execution-scheduler";
 import { classifyReasoningIntent, buildReasoningGuidance, validateReasoningPlan } from "./reasoning.server";
 import { buildExecutionEvidencePack } from "./execution-evidence-pack";
 import { evaluateRunQuality } from "./quality-evaluation.server";
+import { requireOwnedWorkspace } from "@/lib/workspace-identity";
 
 
 let _db: ReturnType<typeof createClient> | null = null;
@@ -242,31 +243,33 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
     }
   } else if (siteAuditUrl) siteDiscoveryIssue = "site_read_skipped_in_safe_mode";
 
-  // Load workspace profile if scoped — used by envision/plan/council.
+  // Load workspace profile fail-closed when a workspace is selected.
+  // A missing row or read error must never fall through to the account-level identity.
   let workspaceProfile: any = null;
   if (ctx.workspaceId && !siteAuditUrl) {
-    try {
-      const { data } = await db()
-        .from("workspaces")
-        .select("id, name, kind, brand_url, brand_summary, keywords, language, country, city, profile, entity_truth_card, onboarding, settings, policies, goals, success_metrics, preferred_models, preferred_experts, preferred_mcp, risk_level, budget")
-        .eq("id", ctx.workspaceId)
-        .eq("owner_id", ctx.userId)
-        .maybeSingle();
-      workspaceProfile = data || null;
-    } catch {}
+    const { data, error } = await db()
+      .from("workspaces")
+      .select("id, owner_id, name, kind, brand_url, brand_summary, keywords, language, country, city, profile, entity_truth_card, onboarding, settings, policies, goals, success_metrics, preferred_models, preferred_experts, preferred_mcp, risk_level, budget")
+      .eq("id", ctx.workspaceId)
+      .eq("owner_id", ctx.userId)
+      .maybeSingle();
+    if (error) throw new Error("workspace_identity_lookup_failed");
+    workspaceProfile = requireOwnedWorkspace(data, ctx.workspaceId, ctx.userId);
   }
-  // Use the active workspace's identity only while that workspace is selected.
+
+  // Use only the selected workspace's identity for workspace-scoped execution.
+  // The account profile is read only when there is no active workspace.
   let entityProfile: any = null;
   if (ctx.workspaceId && !siteAuditUrl) {
-    const truth = workspaceProfile?.entity_truth_card && typeof workspaceProfile.entity_truth_card === "object" ? workspaceProfile.entity_truth_card : {};
-    const links = Array.isArray(truth.links) ? truth.links : (workspaceProfile?.brand_url ? [{ url: workspaceProfile.brand_url, type: "official" }] : []);
+    const truth = workspaceProfile.entity_truth_card && typeof workspaceProfile.entity_truth_card === "object" ? workspaceProfile.entity_truth_card : {};
+    const links = Array.isArray(truth.links) ? truth.links : (workspaceProfile.brand_url ? [{ url: workspaceProfile.brand_url, type: "official" }] : []);
     entityProfile = {
-      brand_name: truth.entity_name || workspaceProfile?.name || null,
-      brand_keywords: Array.isArray(truth.keywords) ? truth.keywords.join(", ") : (truth.keywords || workspaceProfile?.keywords || null),
-      hq_country: truth.country || workspaceProfile?.country || null,
-      entity_type: truth.entity_type || workspaceProfile?.kind || null,
+      brand_name: truth.entity_name || workspaceProfile.name || null,
+      brand_keywords: Array.isArray(truth.keywords) ? truth.keywords.join(", ") : (truth.keywords || workspaceProfile.keywords || null),
+      hq_country: truth.country || workspaceProfile.country || null,
+      entity_type: truth.entity_type || workspaceProfile.kind || null,
       target_markets: Array.isArray(truth.markets) ? truth.markets : [],
-      specialty_scope: truth.sector || workspaceProfile?.brand_summary || null,
+      specialty_scope: truth.sector || workspaceProfile.brand_summary || null,
       entity_links: links,
     };
   } else if (!siteAuditUrl) {
