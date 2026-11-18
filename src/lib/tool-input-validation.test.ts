@@ -41,6 +41,14 @@ describe("typed tool input normalization", () => {
     });
   });
 
+  it("rejects objects supplied for declared text fields", () => {
+    const normalized = normalizeToolInput("suggest", { description: { headline: "not a string" } });
+    expect(coerceToolInput("suggest", normalized)).toEqual({
+      input: {},
+      issues: [{ field: "description", expected: "string" }],
+    });
+  });
+
   it("preserves false and zero as valid values", () => {
     expect(coerceToolInput("keyword_intelligence", {
       live_search: false,
