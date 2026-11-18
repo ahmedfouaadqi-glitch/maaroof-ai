@@ -106,11 +106,12 @@ No raw IP address is included in this initial contract. Do not add it by default
 ## Current limitations
 
 - This is a domain foundation, not a live analytics feature.
-- No events are being collected or stored.
+- No events are being collected or stored; repository interfaces are contracts only.
 - A read-only GA4 Data API runReport function is implemented with injected fetch
   and short-lived token; it is not connected to OAuth, property discovery, UI or
   application workflows.
 - No CRM connector, UI, report widget, scheduled job or new MAAROOF tool is wired.
+- No concrete repository/storage adapter implements the tenant-scoped interface.
 - Session totals depend on source-provided session IDs; missing IDs are counted as
   ungrouped events rather than converted into inferred sessions.
 - The report projection only attributes conversions to explicitly listed source
