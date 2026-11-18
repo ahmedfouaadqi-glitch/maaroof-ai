@@ -55,8 +55,9 @@ export function normalizeToolInput(tool: string, raw: unknown): Record<string, u
       continue;
     }
     if (declaredType === "string") {
-      const text = flatten(value);
+      const text = toText(value);
       if (text) out[key] = text;
+      else if (typeof value === "object" && !Array.isArray(value)) out[key] = value;
       continue;
     }
     if (declaredType === "string[]") {
