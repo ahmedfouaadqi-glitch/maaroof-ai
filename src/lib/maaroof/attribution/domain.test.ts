@@ -17,6 +17,10 @@ describe("classifyTrafficSource", () => {
     expect(result.evidence).toBe("utm");
   });
 
+  it("preserves an explicit AI source even when the campaign medium is missing", () => {
+    expect(classifyTrafficSource({ utmSource: "perplexity", utmMedium: "(none)" }).channel).toBe("ai_referral");
+  });
+
   it("keeps GA4 Direct / None labels classified as Direct", () => {
     expect(classifyTrafficSource({ utmSource: "(direct)", utmMedium: "(none)" }).channel).toBe("direct");
   });
