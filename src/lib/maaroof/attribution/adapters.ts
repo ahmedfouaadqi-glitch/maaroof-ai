@@ -255,11 +255,13 @@ export type RevenueSummary = {
   currency: string;
   confirmedConversions: number;
   confirmedRevenue: number;
+  confirmedRevenueMinor: number;
+  currencyFractionDigits: number;
   pendingConversions: number;
   reversedConversions: number;
 };
 
-export function aggregateRevenue(inputs: unknown[]): {
+function currencyFractionDigits(currency: string): number {\n  return new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits;\n}\n\nexport function aggregateRevenue(inputs: unknown[]): {
   summaries: RevenueSummary[];
   rejected: AdapterIssue[];
   duplicateConversionIds: string[];
@@ -294,13 +296,19 @@ export function aggregateRevenue(inputs: unknown[]): {
       currency: conversion.currency,
       confirmedConversions: 0,
       confirmedRevenue: 0,
+      confirmedRevenueMinor: 0,
+      currencyFractionDigits: currencyFractionDigits(conversion.currency),
       pendingConversions: 0,
       reversedConversions: 0,
     };
 
-    if (conversion.status === "confirmed") {
+    const scale = 10 ** summary.currencyFractionDigits;
+    const scaledValue = conversion.value * scale;
+    const minorUnits = Math.round(scaledValue);
+    if (!Number.isSafeInteger(minorUnits) || Math.abs(scaledValue - minorUnits) > 1e-7) {\n      rejected.push({ externalId: conversion.conversionId, code: "invalid_record", message: "Revenue value exceeds currency precision or safe integer limits." });\n      continue;\n    }\n\n    if (conversion.status === "confirmed") {
       summary.confirmedConversions += 1;
-      summary.confirmedRevenue += conversion.value;
+      summary.confirmedRevenueMinor += minorUnits;
+      summary.confirmedRevenue = summary.confirmedRevenueMinor / scale;
     } else if (conversion.status === "pending") {
       summary.pendingConversions += 1;
     } else {
