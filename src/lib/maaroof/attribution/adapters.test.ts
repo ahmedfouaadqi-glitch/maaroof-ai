@@ -117,19 +117,25 @@ describe("aggregateRevenue", () => {
 describe("buildAttributionProjection", () => {
   it("scopes events and conversions to one workspace and keeps AI referral separate", () => {
     const first = normalizeExternalTrafficRecord(event());
+    const sameWorkspaceOtherJourney = normalizeExternalTrafficRecord(event({
+      externalId: "unrelated-session-event",
+      sessionId: "session-2",
+      source: "linkedin",
+      medium: "social",
+    }));
     const other = normalizeExternalTrafficRecord(event({
       externalId: "other",
       workspaceId: "22222222-2222-4222-8222-222222222222",
       source: "linkedin",
       medium: "social",
     }));
-    expect(first.success && other.success).toBe(true);
-    if (!first.success || !other.success) return;
+    expect(first.success && sameWorkspaceOtherJourney.success && other.success).toBe(true);
+    if (!first.success || !sameWorkspaceOtherJourney.success || !other.success) return;
 
     const projection = buildAttributionProjection({
       workspaceId,
       model: "last_touch",
-      traffic: [first.data, other.data],
+      traffic: [first.data, sameWorkspaceOtherJourney.data, other.data],
       conversions: [{
         conversionId: "order-1",
         workspaceId,
@@ -140,7 +146,7 @@ describe("buildAttributionProjection", () => {
         status: "confirmed",
       }],
     });
-    expect(projection.counts.acceptedTrafficEvents).toBe(1);
+    expect(projection.counts.acceptedTrafficEvents).toBe(2);
     expect(projection.counts.aiReferralEvents).toBe(1);
     expect(projection.channelAttribution[0].channel).toBe("ai_referral");
     expect(projection.channelAttribution[0].attributedRevenue).toBe(100);
