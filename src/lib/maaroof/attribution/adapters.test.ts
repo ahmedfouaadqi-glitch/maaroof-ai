@@ -106,6 +106,17 @@ describe("aggregateRevenue", () => {
     status: "confirmed",
   };
 
+  it("rejects cross-session event attribution when a conversion has no session ID", () => {
+    const result = aggregateRevenue([{
+      ...conversion,
+      conversionId: "unscoped-journey",
+      sessionId: null,
+      sourceEventIds: ["first_party:evt-1"],
+    }]);
+    expect(result.summaries).toHaveLength(0);
+    expect(result.rejected).toHaveLength(1);
+  });
+
   it("keeps currencies separate and prevents duplicate conversion counting", () => {
     const result = aggregateRevenue([
       conversion,
@@ -201,6 +212,7 @@ describe("buildAttributionProjection", () => {
           conversionId: "reversed-1",
           workspaceId,
           occurredAt: "2026-02-02T10:00:00.000Z",
+          sessionId: null,
           sourceEventIds: [],
           value: 30,
           currency: "USD",
