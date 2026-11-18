@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { AttributionEvent } from "./domain";
+import { validateAttributionEvent, type AttributionEvent } from "./domain";
 import type { ConversionInput } from "./adapters";
 
 /**
@@ -39,23 +39,7 @@ export function validateWorkspaceEventBatch(
       issues.push(`events[${index}].workspaceId: workspace_scope_mismatch`);
       continue;
     }
-    const parsed = z.object({
-      eventId: z.string().min(1).max(240),
-      occurredAt: z.string().datetime(),
-      workspaceId: z.string().uuid(),
-      sessionId: z.string().min(1).max(160).nullable(),
-      eventName: z.string().min(1).max(100),
-      landingUrl: z.string().url().optional(),
-      referrerUrl: z.string().url().optional(),
-      userAgent: z.string().max(2000).optional(),
-      utmSource: z.string().max(200).optional(),
-      utmMedium: z.string().max(200).optional(),
-      utmCampaign: z.string().max(200).optional(),
-      anonymousId: z.string().max(160).nullable().optional(),
-      consent: z.enum(["granted", "denied", "unknown"]),
-      value: z.number().finite().nonnegative().optional(),
-      currency: z.string().regex(/^[A-Z]{3}$/).optional(),
-    }).strict().safeParse(event);
+    const parsed = validateAttributionEvent(event);
     if (!parsed.success) {
       issues.push(...parsed.error.issues.map((issue) => `events[${index}].${issue.path.join(".")}: ${issue.message}`));
       continue;
@@ -77,9 +61,9 @@ export function validateWorkspaceEventBatch(
 }
 
 export const AttributionRetentionPolicySchema = z.object({
-  eventRetentionDays: z.number().int().min(1).max(730),
-  conversionRetentionDays: z.number().int().min(1).max(2555),
-  deleteOnConsentRevoked: z.literal(true),
+  eventRetentionDays: z.number().int().positive(),
+  conversionRetentionDays: z.number().int().positive(),
+  deleteOnConsentRevoked: z.boolean(),
 }).strict();
 export type AttributionRetentionPolicy = z.infer<typeof AttributionRetentionPolicySchema>;
 
@@ -121,6 +105,11 @@ export interface AttributionRepository {
   ): Promise<{ inserted: number; updated: number; duplicates: number }>;
 
   deleteExpiredEvents(
+    scope: AttributionWorkspaceScope,
+    olderThan: string,
+  ): Promise<{ deleted: number }>;
+
+  deleteExpiredConversions(
     scope: AttributionWorkspaceScope,
     olderThan: string,
   ): Promise<{ deleted: number }>;
