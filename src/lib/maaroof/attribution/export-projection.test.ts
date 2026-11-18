@@ -17,6 +17,8 @@ const projection: AttributionProjection = {
     aiReferralEvents: 3,
     crawlerMarkerEvents: 2,
     confirmedConversions: 4,
+    pendingConversions: 1,
+    reversedConversions: 1,
     unattributedConversions: 1,
   },
   channelAttribution: [{
