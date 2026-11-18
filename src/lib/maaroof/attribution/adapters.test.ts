@@ -75,7 +75,7 @@ describe("GA4 mapping", () => {
     expect(row && classifyGa4Row(row).channel).toBe("ai_referral");
   });
 
-  it("rejects negative or fractional GA4 count metrics", () => {
+  it("rejects invalid session counts while preserving fractional key-event credit", () => {
     const row = {
       dimensionValues: Array.from({ length: 3 }, () => ({ value: "x" })),
       metricValues: [{ value: "-1" }, { value: "1" }, { value: "0" }],
@@ -85,6 +85,15 @@ describe("GA4 mapping", () => {
       ...row,
       metricValues: [{ value: "1.5" }, { value: "1" }, { value: "0" }],
     })).toBeNull();
+  });
+
+  it("preserves fractional GA4 key-event values", () => {
+    const row = mapGa4ReportRow({
+      dimensionValues: [{ value: "chatgpt.com" }, { value: "referral" }, { value: "campaign" }],
+      metricValues: [{ value: "3" }, { value: "1.5" }, { value: "12.25" }],
+    });
+    expect(row?.sessions).toBe(3);
+    expect(row?.keyEvents).toBe(1.5);
   });
 
   it("rejects incomplete or non-numeric GA4 rows", () => {
