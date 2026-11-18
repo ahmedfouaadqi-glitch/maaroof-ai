@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractRewriteSourceText, fillToolInput, fillFromTask, missingFields, sanitizeReflection } from "./agent-input";
+import { extractRewriteSourceText, fillToolInput, fillFromTask, missingFields, sanitizeReflection, taskEntityInput } from "./agent-input";
 
 describe("agent-input", () => {
   it("fills the tool's own brand key with priority goal > workspace > profile", () => {
@@ -31,6 +31,15 @@ describe("agent-input", () => {
     expect(filled.category).toBe("Software");
     expect(missingFields("keyword_intelligence", filled)).toEqual([]);
     expect(missingFields("keyword_intelligence", { site: "https://example.com" })).toEqual([]);
+    expect(missingFields("keyword_intelligence", { site: "not-a-url" })).toEqual(["brand"]);
+  });
+
+  it("passes a prior entity URL to keyword intelligence as site", () => {
+    const input = taskEntityInput("keyword_intelligence", {}, [
+      { tool: "known", ok: true, output: { brand: "Acme", url: "https://acme.example" } },
+    ]);
+    expect(input.site).toBe("https://acme.example");
+    expect(input.url).toBeUndefined();
   });
 
   it("asks for brand or site when keyword intelligence has no identity context", () => {
