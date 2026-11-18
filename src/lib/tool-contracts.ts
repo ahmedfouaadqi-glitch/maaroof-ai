@@ -11,7 +11,7 @@ export type ToolExecutionKind = "api" | "internal" | "coordinator" | "agent_only
 export type ToolAvailability = "active" | "paused" | "special";
 export type ToolOutputContract = {
   /** known uses a successful SSE result event; errors are still JSON. */
-  transport: "json" | "sse";
+  transport: "json" | "sse" | "internal";
   successKind: "top_level_object" | "result_envelope" | "event_stream" | "paused_response";
   /** Stable top-level fields observed in the route success response. */
   successFields: string[];
@@ -37,6 +37,11 @@ const API_OUTPUTS: Partial<Record<ToolKey, ToolOutputContract>> = {
   brand_authority: { transport: "json", successKind: "top_level_object", successFields: ["operation_id", "slug", "public_url", "publication_scope", "published_on_customer_domain", "summary", "markdown", "json_ld", "ping"], errorField: "error" },
   geo_rewrite: { transport: "json", successKind: "top_level_object", successFields: ["rewritten", "score", "authority", "local", "citation", "added_elements", "verify_notes"], errorField: "error" },
   keyword_intelligence: { transport: "json", successKind: "top_level_object", successFields: ["measured_keywords", "measured_pairs", "payload", "summary", "diagnostics", "evidence_state", "evidence_note", "parties", "competitor_validation", "context", "charged", "llms", "missing_fields", "clusters"], errorField: "error" },
+};
+
+const INTERNAL_OUTPUTS: Partial<Record<ToolKey, ToolOutputContract>> = {
+  translate: { transport: "internal", successKind: "top_level_object", successFields: ["target_lang", "text", "charged"], errorField: "error" },
+  teach_space: { transport: "internal", successKind: "top_level_object", successFields: ["saved_facts"], errorField: "error" },
 };
 
 export type ToolExecutionContract = {
@@ -105,7 +110,7 @@ function buildContract(key: ToolKey): ToolExecutionContract {
     plannerSelectable,
     skillExecutable: plannerSelectable,
     options: TOOL_OPTIONS[key] || null,
-    output: API_OUTPUTS[key] || null,
+    output: API_OUTPUTS[key] || INTERNAL_OUTPUTS[key] || null,
   };
 }
 
