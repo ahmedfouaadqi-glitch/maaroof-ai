@@ -257,6 +257,10 @@ export type RevenueSummary = {
   confirmedConversions: number;
   confirmedRevenue: number;
   confirmedRevenueMinor: number;
+  pendingRevenue: number;
+  pendingRevenueMinor: number;
+  reversedRevenue: number;
+  reversedRevenueMinor: number;
   currencyFractionDigits: number;
   pendingConversions: number;
   reversedConversions: number;
@@ -312,6 +316,10 @@ export function aggregateRevenue(inputs: unknown[]): {
       confirmedConversions: 0,
       confirmedRevenue: 0,
       confirmedRevenueMinor: 0,
+      pendingRevenue: 0,
+      pendingRevenueMinor: 0,
+      reversedRevenue: 0,
+      reversedRevenueMinor: 0,
       currencyFractionDigits: fractionDigits,
       pendingConversions: 0,
       reversedConversions: 0,
@@ -330,16 +338,30 @@ export function aggregateRevenue(inputs: unknown[]): {
     if (conversion.status === "confirmed") {
       const nextTotalMinor = summary.confirmedRevenueMinor + minorUnits;
       if (!Number.isSafeInteger(nextTotalMinor)) {
-        rejected.push({ externalId: conversion.conversionId, code: "invalid_record", message: "Aggregated revenue exceeds safe integer limits." });
+        rejected.push({ externalId: conversion.conversionId, code: "invalid_record", message: "Aggregated confirmed revenue exceeds safe integer limits." });
         continue;
       }
       summary.confirmedConversions += 1;
       summary.confirmedRevenueMinor = nextTotalMinor;
       summary.confirmedRevenue = summary.confirmedRevenueMinor / scale;
     } else if (conversion.status === "pending") {
+      const nextTotalMinor = summary.pendingRevenueMinor + minorUnits;
+      if (!Number.isSafeInteger(nextTotalMinor)) {
+        rejected.push({ externalId: conversion.conversionId, code: "invalid_record", message: "Aggregated pending revenue exceeds safe integer limits." });
+        continue;
+      }
       summary.pendingConversions += 1;
+      summary.pendingRevenueMinor = nextTotalMinor;
+      summary.pendingRevenue = summary.pendingRevenueMinor / scale;
     } else {
+      const nextTotalMinor = summary.reversedRevenueMinor + minorUnits;
+      if (!Number.isSafeInteger(nextTotalMinor)) {
+        rejected.push({ externalId: conversion.conversionId, code: "invalid_record", message: "Aggregated reversed revenue exceeds safe integer limits." });
+        continue;
+      }
       summary.reversedConversions += 1;
+      summary.reversedRevenueMinor = nextTotalMinor;
+      summary.reversedRevenue = summary.reversedRevenueMinor / scale;
     }
     groups.set(key, summary);
   }
