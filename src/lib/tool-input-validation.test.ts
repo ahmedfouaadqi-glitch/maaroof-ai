@@ -22,6 +22,13 @@ describe("typed tool input normalization", () => {
       input: {},
       issues: [{ field: "budget_iqd", expected: "string|number" }],
     });
+    const placeholderCompetitor = coerceToolInput("feasibility", normalizeToolInput("feasibility", {
+      competitors: "Competitor 1",
+    }));
+    expect(placeholderCompetitor).toEqual({
+      input: {},
+      issues: [{ field: "competitors", expected: "string" }],
+    });
   });
 
   it("coerces explicitly typed numeric, boolean, and list fields", () => {
