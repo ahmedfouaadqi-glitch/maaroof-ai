@@ -32,6 +32,7 @@ describe("normalizeExternalTrafficRecord", () => {
     if (result.success) {
       expect(result.data.classification.channel).toBe("ai_referral");
       expect(result.data.event.workspaceId).toBe(workspaceId);
+      expect(result.data.event.eventId).toBe("first_party:evt-1");
     }
   });
 
@@ -86,7 +87,7 @@ describe("aggregateRevenue", () => {
     conversionId: "order-1",
     workspaceId,
     occurredAt: "2026-02-02T10:00:00.000Z",
-    sourceEventIds: ["evt-1"],
+    sourceEventIds: ["first_party:evt-1"],
     value: 100,
     currency: "USD",
     status: "confirmed",
