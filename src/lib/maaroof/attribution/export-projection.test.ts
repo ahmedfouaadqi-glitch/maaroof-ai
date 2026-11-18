@@ -10,7 +10,7 @@ const projection: AttributionProjection = {
   counts: {
     acceptedTrafficEvents: 12,
     duplicateTrafficEventsExcluded: 0,
-    humanSessions: 8,
+    nonCrawlerSessions: 8,
     aiReferralSessions: 2,
     crawlerSessions: 1,
     eventsWithoutSessionId: 2,
