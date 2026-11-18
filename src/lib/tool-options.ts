@@ -23,8 +23,8 @@ export type ToolOptions = {
 };
 
 export const TOOL_OPTIONS: Record<string, ToolOptions> = {
-  analyze: { fields: ["text"], contextFields: ["lang", "scope", "workspace_id"] },
-  suggest: { fields: ["description", "sourceText", "brand", "audience", "contentType", "count", "length", "platforms", "goal"], uiFields: ["imageBase64", "imageMime"], contextFields: ["lang", "scope", "workspace_id"], requiredFields: ["description"] },
+  analyze: { fields: ["text"], contextFields: ["lang", "scope", "workspace_id"], requiredFields: ["text"], minLength: { text: 20 } },
+  suggest: { fields: ["description", "sourceText", "brand", "audience", "contentType", "count", "length", "platforms", "goal"], uiFields: ["imageBase64", "imageMime"], contextFields: ["lang", "scope", "workspace_id"], requiredAnyOf: [["description", "sourceText", "imageBase64"]] },
   compare: { fields: ["brand", "competitors", "keywords", "websites"], contextFields: ["lang", "scope", "workspace_id"], brandField: "brand", requiredFields: ["brand"] },
   known: { fields: ["brand", "sector", "keywords", "website", "depth"], uiFields: ["force"], contextFields: ["url", "lang", "scope", "workspace_id"], brandField: "brand", requiredFields: ["brand"], enums: { depth: ["quick", "deep"] } },
   feasibility: { fields: ["project_name", "sector", "city", "problem", "solution", "target_audience", "revenue_model", "budget_iqd", "team_size", "timeline_months", "competitors", "notes"], contextFields: ["lang", "scope", "workspace_id"], brandField: "project_name", requiredFields: ["project_name"] },
