@@ -108,7 +108,7 @@ export function normalizeExternalTrafficRecord(input: unknown): {
   }
 
   const eventCandidate = {
-    eventId: record.externalId,
+    eventId: record.provider + ":" + record.externalId,
     occurredAt: record.occurredAt,
     workspaceId: record.workspaceId,
     sessionId: record.sessionId,
