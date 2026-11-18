@@ -26,7 +26,7 @@ prove a lead; and an attributed conversion does not establish causal lift.
 
 The classifier applies the following order:
 
-1. A known crawler user-agent marker is classified as `crawler` and excluded
+1. A user-agent matching a crawler marker is provisionally classified as `crawler` and excluded
    from human journey attribution.
 2. An explicit UTM source identifying a known AI platform is `ai_referral`.
 3. A recognized AI-platform HTTP referrer is `ai_referral`.
