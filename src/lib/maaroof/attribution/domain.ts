@@ -207,6 +207,7 @@ export function classifyTrafficSource(input: {
 export type Touchpoint = {
   eventId: string;
   workspaceId: string | null;
+  sessionId: string | null;
   occurredAt: string;
   channel: TrafficChannel;
   source: string | null;
@@ -240,12 +241,13 @@ export function attributeConversion(
   conversion: Conversion,
   touchpoints: Touchpoint[],
   model: AttributionModel,
-  options: { halfLifeDays?: number; eligibleEventIds?: readonly string[] } = {},
+  options: { halfLifeDays?: number; eligibleEventIds?: readonly string[]; eligibleSessionId?: string } = {},
 ): AttributionResult {
   const eligible = touchpoints
     .filter((touch) =>
       touch.workspaceId === conversion.workspaceId
       && (!options.eligibleEventIds || options.eligibleEventIds.includes(touch.eventId))
+      && (!options.eligibleSessionId || touch.sessionId === options.eligibleSessionId)
       && touch.channel !== "crawler"
       && Number.isFinite(Date.parse(touch.occurredAt))
       && Date.parse(touch.occurredAt) <= Date.parse(conversion.occurredAt),
