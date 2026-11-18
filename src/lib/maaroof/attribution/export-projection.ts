@@ -10,6 +10,7 @@ const LABELS: Record<ExportLang, {
   attributedRevenue: string;
   currency: string;
   trafficEvents: string;
+  duplicateEvents: string;
   humanSessions: string;
   aiReferralSessions: string;
   crawlerSessions: string;
@@ -33,6 +34,7 @@ const LABELS: Record<ExportLang, {
     attributedRevenue: "الإيراد المنسوب",
     currency: "العملة",
     trafficEvents: "أحداث الزيارات المسجلة",
+    duplicateEvents: "الأحداث المكررة المستبعدة",
     humanSessions: "الجلسات البشرية",
     aiReferralSessions: "جلسات إحالة AI",
     crawlerSessions: "جلسات الزواحف",
@@ -56,6 +58,7 @@ const LABELS: Record<ExportLang, {
     attributedRevenue: "Attributed revenue",
     currency: "Currency",
     trafficEvents: "Recorded traffic events",
+    duplicateEvents: "Duplicate events excluded",
     humanSessions: "Human sessions",
     aiReferralSessions: "AI referral sessions",
     crawlerSessions: "Crawler sessions",
@@ -79,6 +82,7 @@ const LABELS: Record<ExportLang, {
     attributedRevenue: "داهاتی تەرخانکراو",
     currency: "دراو",
     trafficEvents: "ڕووداوەکانی هاتووچۆی تۆمارکراو",
+    duplicateEvents: "ڕووداوە دووبارەکان لابراون",
     humanSessions: "دانیشتنە مرۆییەکان",
     aiReferralSessions: "دانیشتنەکانی ئاماژەی AI",
     crawlerSessions: "دانیشتنەکانی کراولەر",
@@ -111,6 +115,7 @@ export function toAttributionExportSections(
     rows: [
       [labels.status, statusLabel(projection.measurementStatus, lang)],
       [labels.trafficEvents, projection.counts.acceptedTrafficEvents],
+      [labels.duplicateEvents, projection.counts.duplicateTrafficEventsExcluded],
       [labels.humanSessions, projection.counts.humanSessions],
       [labels.aiReferralSessions, projection.counts.aiReferralSessions],
       [labels.crawlerSessions, projection.counts.crawlerSessions],
