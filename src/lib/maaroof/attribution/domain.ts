@@ -271,7 +271,10 @@ export function attributeConversion(
   } else if (model === "linear") {
     weights = eligible.map(() => 1 / eligible.length);
   } else {
-    const halfLifeDays = Math.max(0.01, options.halfLifeDays ?? 7);
+    const requestedHalfLife = options.halfLifeDays ?? 7;
+    const halfLifeDays = Number.isFinite(requestedHalfLife) && requestedHalfLife > 0
+      ? Math.max(0.01, requestedHalfLife)
+      : 7;
     const latestTouchTime = Date.parse(eligible[eligible.length - 1].occurredAt);
     weights = eligible.map((touch) => {
       const ageDays = Math.max(0, (latestTouchTime - Date.parse(touch.occurredAt)) / 86_400_000);
