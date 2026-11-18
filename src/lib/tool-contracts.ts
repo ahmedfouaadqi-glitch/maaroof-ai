@@ -120,7 +120,7 @@ function buildContract(key: ToolKey): ToolExecutionContract {
     entryPath: key === "maaroof" ? "/api/maaroof" : null,
     plannerSelectable,
     skillExecutable: plannerSelectable,
-    authorizationOwner: execution === "api" ? "route" : execution === "agent_only" ? "none" : "orchestrator",
+    authorizationOwner: execution === "api" || execution === "coordinator" ? "route" : execution === "agent_only" ? "none" : "orchestrator",
     billingOwner: availability === "paused" || execution === "agent_only" || key === "teach_space"
       ? "none"
       : execution === "api" ? "route" : "orchestrator",
