@@ -291,3 +291,34 @@
 - Dardasha يوضح أن تحويل الرد إلى مهمة يمر عبر مسودة وموافقة المستخدم قبل التنفيذ؛ هذا يحافظ على فصل التحضير عن بدء المهمة في الجزء المفحوص.
 - الفرع يحتوي أيضاً تعديلات على SiteHeader.tsx وsound.ts خارج نطاق تحسين الدردشة. كما أن مقارنة الفرع مع main أظهرت 14 commit ahead و332 behind وحالة diverged؛ لا يُعامل كفرع جاهز للدمج.
 - لا يوجد في هذه المراجعة دليل على فشل وظيفي محدد في PR #24؛ التصنيف الحالي: تحسين UI/UX مشروط باختبارات أوسع ومراجعة التغييرات غير المرتبطة قبل الدمج.
+
+### PR #1 — Skills workspace and background jobs
+
+- مقارنة الفرع مع main: 145 commit ahead و902 behind، وحالة diverged؛ ملفاته تتضمن تغييرات كثيرة في auth/request context/orchestrator/routes وCloudflare config، إضافة إلى migrations مستثناة.
+- تمت مراجعة الوحدات pure التالية فقط: job-weight.ts واختباراته وskill-access-policy.ts. تقدير light/medium/deep deterministic heuristic ويصرح بأنه ليس صلاحية أو عرض سعر؛ واختباراته تغطي عتبات أساسية. سياسة الوصول تطبق precedence: user ثم plan ثم global.
+- لم تُراجع background-jobs.server.ts أو server routes أو auth أو migrations/Cloudflare wiring؛ لا تُعتمد نتائج وصف PR أو نجاح CI على أنها تحقق runtime. لا قرار دمج.
+
+### PR #3 — Context-aware interview engine
+
+- مقارنة الفرع مع main: 230 commit ahead و876 behind، وحالة diverged؛ التغيير واسع ويتضمن migrations وRLS tests وAPI وUI، وهي خارج نطاق الفحص التشغيلي المسموح.
+- تمت مراجعة interview-engine.ts وquestion-bank.ts وعينة كبيرة من اختبارات المحرك بوصفها منطقاً pure فقط. المحرك يدعم target types متعددة، مجالات SEO/AEO/GEO/GSEO، أسئلة شرطية، منع دورات الاعتماد، ترتيب الأولوية، أسئلة required/optional، skip/unknown، وفصل traversal completion عن data completion.
+- الاختبارات تغطي سلوكيات مهمة مثل التبعيات الشرطية، المؤشر المحفوظ، التخطي، unknown، اكتمال البيانات، والتحقق من snapshot. لم تُشغّل في هذه البيئة، ولا تثبت صحة API/persistence/resume end-to-end.
+- لا تُراجع ترحيلات Supabase أو سياساتها أو ملفات التكامل معها، ولا قرار دمج للفرع المتباعد.
+
+### PR #59 — Free visibility trial
+
+- تأكد اسم الفرع feat/visibility-free-trial-counter. المقارنة مع main: 99 commit ahead و67 behind، وحالة diverged؛ وتتضمن 9 migrations، لذلك لم تُراجع طبقة التخزين أو إعداداتها.
+- تمت مراجعة visibility-trial-policy.ts واختباراته: TTL للنتيجة 72 ساعة، ثم cooldown خمس ساعات، وإعادة الأهلية بعد 77 ساعة؛ كما يسمح باسترجاع إضافي واحد فقط قبل انتهاء TTL. اختبارات pure تغطي حدود الوقت والوقت غير الصالح.
+- تمت مراجعة TrialKnowledgeSignals.tsx: الواجهة تصف بوضوح أنها عينة من ثلاثة مسارات نموذجية من أصل عشرة، وليست تحققاً مستقلاً أو SEO audit أو Schema.org inspection. هذا إفصاح سليم عن حدود العينة.
+- لم تُراجع visibility-trial.server.ts أو APIs أو migrations أو HMAC/locks/cleanup runtime؛ لا يمكن اعتماد سلامة دورة الحجز أو العزل أو الحذف من مراجعة policy وحدها.
+
+### PR #26 — Workspace isolation
+
+- مقارنة الفرع مع main: 48 commit ahead و331 behind، وحالة diverged. قائمة التغييرات تشمل migration في Drizzle وSupabase وتغييرات في وظائف الوكيل والنشر والقنوات ومكونات مساحات العمل.
+- لم تُراجع migrations أو Supabase types أو سياسات RLS أو سلوك قاعدة البيانات، التزاماً بحدود النطاق. تمت معاينة أسماء الملفات فقط لتحديد نطاق التغيير؛ لا يوجد حكم على نجاح عزل المستأجرين أو فشله.
+- لا يُعتمد PR #26 دون تحقق منفصل مصرح به في نطاق قاعدة البيانات والاختبارات متعددة مساحات العمل.
+
+### خلاصة الفروع المفتوحة ذات الصلة
+
+- الفروع #1 و#3 و#26 و#42 و#53 و#59 و#73 جميعها متباعدة عن main في المقارنات الحالية؛ لا يجوز استنتاج قابلية الدمج من أعداد ahead أو نتائج CI تاريخية.
+- المراجعة الحالية انتقائية ومقصودة: منطق pure وواجهات محددة فقط، مع استبعاد Supabase/DB وملفات الأسرار ومزودي النماذج. لم يُنفذ merge أو cherry-pick أو نشر.
