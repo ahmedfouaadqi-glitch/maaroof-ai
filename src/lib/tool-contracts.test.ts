@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { TOOL_CATALOG } from "./tool-catalog";
 import { TOOL_OPTIONS } from "./tool-options";
+import { MAAROOF_SKILLS } from "./maaroof/skill-catalog";
 import {
   TOOL_CONTRACTS,
   getApiToolPaths,
@@ -34,6 +35,14 @@ describe("canonical tool execution contracts", () => {
     expect(selectable).not.toContain("agent.command");
     expect(selectable).not.toContain("agent.run_targets");
     expect(selectable).not.toContain("agent.visibility");
+  });
+
+  it("ensures every skill references an executable contract", () => {
+    for (const skill of MAAROOF_SKILLS) {
+      for (const key of skill.tools) {
+        expect(TOOL_CONTRACTS[key as keyof typeof TOOL_CONTRACTS]?.skillExecutable, `${skill.key}: ${key}`).toBe(true);
+      }
+    }
   });
 
   it("derives skill execution from the same selectable contract set", () => {
