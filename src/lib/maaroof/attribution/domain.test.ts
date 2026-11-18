@@ -85,6 +85,24 @@ describe("attributeConversion", () => {
     expect(result.credits.map((credit) => credit.eventId)).toEqual(["a", "b"]);
   });
 
+  it("restricts explicit journey attribution to the conversion session", () => {
+    const crossSessionTouches: Touchpoint[] = [
+      ...touches,
+      {
+        eventId: "other-session",
+        workspaceId: conversion.workspaceId,
+        sessionId: "session-2",
+        occurredAt: "2026-01-02T18:00:00.000Z",
+        channel: "social",
+        source: "linkedin.com",
+      },
+    ];
+    const result = attributeConversion(conversion, crossSessionTouches, "last_touch", {
+      eligibleSessionId: "session-1",
+    });
+    expect(result.credits.map((credit) => credit.eventId)).toEqual(["b"]);
+  });
+
   it("excludes crawler events from human journey attribution", () => {
     const result = attributeConversion(conversion, touches, "last_touch");
     expect(result.credits.map((credit) => credit.eventId)).toEqual(["b"]);
