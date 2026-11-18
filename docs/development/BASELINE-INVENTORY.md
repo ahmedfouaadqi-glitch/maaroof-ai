@@ -365,3 +365,39 @@
 - تتبع commit ancestry: 45aa0e22 أضاف domain.test.ts؛ 051fba15 أضاف domain.ts؛ 70095aa9 حذف domain.ts صراحةً عبر revert بعنوان revert accidental default-branch file addition؛ 578edf64 أضاف adapters.test.ts؛ و3d94c7d حذف adapters.test.ts فقط. إذن سبب فشل CI هو بقاء domain.test.ts بعد revert المصدر في 70095aa9، وليس مجرد test commit مستقل غير مصحوب بمصدر.
 - commit 3d94c7d الذي اختبره CI يحمل message 'revert accidental default-branch test file write' لكنه حذف adapters.test.ts، ولا يعالج domain.test.ts أو domain.ts. لذلك اسم commit لا يصف معالجة الخطأ الذي فشل CI فيه.
 - لم يُعد تشغيل CI ولم يُعدّل أي كود. قرار استعادة domain.ts يحتاج مراجعة نية revert 70095aa9 وسياق PR/التغييرات المحيطة قبل أي تعديل. كما لا توجد آلية workflow_dispatch في workflow الحالي؛ push filters لا تشمل work/**، ولا يجوز تعديل workflow أو إنشاء PR فقط لتشغيل CI دون موافقة.
+
+## تتبع دورة معروف من الطلب إلى التقرير والتصدير
+
+هذه خريطة ساكنة من ملفات main، وليست اختباراً end-to-end أو تدقيقاً لقاعدة البيانات.
+
+### 1) نقطة الدخول والتخطيط
+
+- نقطة الدخول المرصودة: src/routes/api/maaroof.ts (POST /api/maaroof). يدعم SSE inline، أو background job عندما يكون interface_mode=workspace؛ إذا تعذر إنشاء job يرجع إلى inline execution. لم تُراجع جداول/سياسات Supabase أو تنفيذ background persistence.
+- في workspace mode، تُقرأ المهارات المختارة أو يُستنتج الاختيار عبر chooseSkillsAutonomously() في skill-inference.ts، مع سياق هوية/ملف/معرفة. بعد ذلك يُمرر selectedSkills إلى runMaaroof().
+- runMaaroof() في orchestrator.server.ts يبني سياق المهمة، يطلب خطة، يمرر خطواتها عبر validateReasoningPlan()، ثم يضمن إضافة أدوات المهارة عبر executableToolsFor(). يوجد مسار منفصل لأوضاع recommendation وsimulation قبل التنفيذ الفعلي.
+
+### 2) من الخطة إلى تشغيل الأداة
+
+- toolPath() يربط مفاتيح الأدوات بمسارات API. التنفيذ يحاول dispatchToolInProcess() عبر ROUTE_LOADERS؛ إذا تعذر تحميل handler قبل بدء التنفيذ يستخدم HTTP fallback. أخطاء handler بعد بدء التنفيذ لا يعاد تشغيلها عبر HTTP لتجنب تكرار آثار جانبية أو خصم مزدوج.
+- قبل الإرسال، يملأ orchestrator المدخلات من المهمة وسياق الكيان، يطبق enforceEnums() وnormalizeToolInput()، ثم يضيف lang/scope/workspace_id. الأدوات translate وteach_space تنفذان داخلياً دون endpoint مستقل. competitor_monitor متوقف ويُتخطى حتى لو ظهر في خطة قديمة.
+- نتائج التنفيذ تعود كـ tool_result events، مع status/transport/http_status/duration عند توفرها؛ ثم تجمع النتائج في results[] ويُنشأ execution evidence pack محدود الحجم مع إظهار الإخفاقات والتخطي.
+
+### 3) التلخيص والحوكمة
+
+- finalizer يبني الرد من النتائج المسجلة إذا تعذر التلخيص الآلي. عند تفعيل الإعدادات، توجد طبقات trust/compliance/reality/quality، لكن تفعيلها مشروط بإعدادات الإدارة.
+- execution-evidence-pack.ts يصرح بأن مخرجات الأدوات ليست تلقائياً تحققاً مستقلاً من المصادر؛ يحافظ على حالات الفشل والتخطي ويحد الحجم. quality-evaluation.server.ts يبقي معايير الجودة not_measured بدلاً من إصدار درجة غير مسنودة.
+- عيب مؤكد يستحق المرحلة الثالثة: orchestrator يمرر results.filter(r => r.ok).length إلى reality.externalSources، كما يمرر عدد النتائج الناجحة إلى trust pipeline sources. نجاح أداة ليس مصدراً خارجياً مستقلاً؛ هذا يضخم دلالة source count عند تفعيل هذه الطبقات. لا يُصلح في Phase 1.
+- عيب/مخاطرة مؤكد في دلالة القياس: classifyReality قد يصنف state إلى verified عندما تتجاوز حسابات داخلية عتبات evidence/verification مع غياب شرط صريح يثبت entailment للادعاء من مصدر مستقل؛ إضافةً إلى ذلك، الإشارة المسماة externalSources مشتقة من عدد الأدوات الناجحة. يلزم مراجعة reality.server.ts كاملة واختبارها في Phase 3 قبل اعتماد verified.
+
+### 4) النتيجة والتقارير والتصدير
+
+- ToolResultExport يحول نتيجة الأداة إلى ExportPayload، ويسجلها في export-bus داخل مساحة العمل النشطة، ويحفظ نسخة في tool history، ويوفر حفظاً في Reports Center عند وجود workspace.
+- export-bus يحتفظ بآخر نتيجة لكل toolKey ضمن workspace/main scope، ويحول الكائنات إلى sections (kv/table/list/text/cards) دون اقتطاع محتوى النتيجة عند بناء payload الافتراضي.
+- ExportButtons يدعم PDF وXLSX وCSV وDOCX وPPTX وMarkdown وJSON، مع سياسات إظهار الصيغ، اختيار اللغة، وخيار ترجمة محتوى التصدير. Machine pack يمكن أن يضيف ملفات/أقساماً منظمة للكيان عند توفر بياناته.
+- Reports Center يدعم حفظ payload/HTML، listing، قراءة تقرير، حالات Review Required/Approved/Released وروابط مشاركة ذات token hash وصلاحية زمنية. هذه ملاحظات على واجهات/دوال التطبيق فقط؛ لم تُراجع RLS أو RPC أو سياسات Supabase، ولا يُستنتج منها حكم أمني على العزل.
+- ReportBuilder يجمع نتائج export-bus مع بيانات تاريخ الأدوات/مؤشرات تقارير؛ وهو workspace/report surface مستقل وليس أداة orchestrator عادية.
+
+### 5) حدود التتبع
+
+- تم تتبع مسارات التطبيق والواجهات والعقود والـ orchestrator ونتيجة التصدير ساكناً من ملفات main؛ لم تنفذ جلسة مستخدم فعلية ولا طلبات HTTP حية ولا اختبارات تكامل أو قاعدة بيانات.
+- لا تزال كل أحكام Supabase/RLS/Auth/storage والمخططات خارج النطاق المحمي، كما تبقى موصلات النماذج ومزوداتها وتوجيهها دون مراجعة أو تعديل.
