@@ -16,8 +16,11 @@ export type EntityContext = {
 /** Backward-compatible view of required fields, derived from tool metadata. */
 export const REQUIRED_FIELDS: Record<string, string[]> = Object.fromEntries(
   Object.entries(TOOL_OPTIONS)
-    .filter(([, options]) => options.requiredFields?.length)
-    .map(([tool, options]) => [tool, options.requiredFields || []]),
+    .map(([tool, options]) => [
+      tool,
+      options.requiredFields?.length ? options.requiredFields : (options.requiredAnyOf || []).map((group) => group[0]).filter(Boolean),
+    ])
+    .filter(([, fields]) => fields.length),
 );
 
 const ANY_BRAND = ["brand", "brand_name", "company", "business_name", "project_name"];
