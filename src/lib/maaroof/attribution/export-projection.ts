@@ -18,6 +18,8 @@ const LABELS: Record<ExportLang, {
   aiReferrals: string;
   crawlerEvents: string;
   conversions: string;
+  pendingConversions: string;
+  reversedConversions: string;
   unattributed: string;
   status: string;
   limitations: string;
@@ -42,6 +44,8 @@ const LABELS: Record<ExportLang, {
     aiReferrals: "إحالات AI المسجلة",
     crawlerEvents: "أحداث الزواحف",
     conversions: "التحويلات المؤكدة",
+    pendingConversions: "التحويلات المعلقة",
+    reversedConversions: "التحويلات المعكوسة",
     unattributed: "تحويلات بلا إسناد",
     status: "حالة القياس",
     limitations: "حدود القياس",
@@ -66,6 +70,8 @@ const LABELS: Record<ExportLang, {
     aiReferrals: "Recorded AI referrals",
     crawlerEvents: "Crawler events",
     conversions: "Confirmed conversions",
+    pendingConversions: "Pending conversions",
+    reversedConversions: "Reversed conversions",
     unattributed: "Unattributed conversions",
     status: "Measurement status",
     limitations: "Measurement limitations",
@@ -90,6 +96,8 @@ const LABELS: Record<ExportLang, {
     aiReferrals: "ئاماژەکانی AI",
     crawlerEvents: "ڕووداوەکانی کراولەر",
     conversions: "گۆڕانکارییە پشتڕاستکراوەکان",
+    pendingConversions: "گۆڕانکارییە چاوەڕوانکراوەکان",
+    reversedConversions: "گۆڕانکارییە پاشگەزکراوەکان",
     unattributed: "گۆڕانکارییە بێ ئەتریبیوشنەکان",
     status: "دۆخی پێوانەکردن",
     limitations: "سنوورەکانی پێوانەکردن",
@@ -123,6 +131,8 @@ export function toAttributionExportSections(
       [labels.aiReferrals, projection.counts.aiReferralEvents],
       [labels.crawlerEvents, projection.counts.crawlerMarkerEvents],
       [labels.conversions, projection.counts.confirmedConversions],
+      [labels.pendingConversions, projection.counts.pendingConversions],
+      [labels.reversedConversions, projection.counts.reversedConversions],
       [labels.unattributed, projection.counts.unattributedConversions],
     ],
   };
