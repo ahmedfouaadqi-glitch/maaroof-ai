@@ -1,11 +1,10 @@
-import { isPlaceholderName } from "@/lib/maaroof/event-labels";
 import { reusableResultKey } from "./jobs";
 import { buildEvidenceFinalAnswer } from "./finalizer";
 // Architecture & Concept: Ahmed Maaroof
 // Maaroof orchestrator: Plan → Act → Reflect over the existing 16 tool endpoints.
 // Direct fetch to Lovable AI Gateway + internal HTTP to /api/* routes (worker-internal).
 import { describeToolOptions, enforceEnums, TOOL_OPTIONS } from "@/lib/tool-options";
-import { coerceToolInput } from "@/lib/tool-input-validation";
+import { coerceToolInput, normalizeToolInput } from "@/lib/tool-input-validation";
 import { checkEntityConsistency } from "@/lib/entity-consistency";
 import { fillToolInput, missingFields, clarifyQuestion, sanitizeReflection } from "./agent-input";
 import { sanitizeReport, planAsList, simulationSummary } from "./mode-report";
@@ -59,50 +58,6 @@ const HEAVY_TOOLS = new Set(["visibility", "known", "compare", "competitor_compa
 
 function toolPath(toolKey: string): string | null {
   return getToolPath(toolKey);
-}
-
-// Fields every tool endpoint expects as a plain string. The planner is an LLM
-// and often emits arrays/objects here, which used to crash the endpoint (500).
-const TEXT_FIELDS = new Set([
-  "brand", "brand_name", "business_name", "project_name", "app_name", "app_url",
-  "keywords", "brand_keywords", "sector", "city", "country", "text", "url",
-  "source_url", "description", "sourceText", "topic", "goal", "kind", "action",
-  "site", "category", "market_text", "target_market", "content_language", "request_text", "attachment_id",
-  "official_website", "website_url",
-]);
-// Fields that must stay arrays of strings.
-const LIST_FIELDS = new Set(["competitors", "platforms", "engines", "urls", "probe_engines", "markets", "skip_keyword_pairs", "skip_keywords", "channel_types"]);
-
-function flatten(v: unknown): string {
-  if (v == null) return "";
-  if (typeof v === "string") return v.trim();
-  if (typeof v === "number" || typeof v === "boolean") return String(v);
-  if (Array.isArray(v)) return v.map(flatten).filter(Boolean).join(", ");
-  try { return JSON.stringify(v); } catch { return String(v); }
-}
-
-/** Coerce planner-produced step input into the shapes tool endpoints expect. */
-export function normalizeToolInput(input: any): Record<string, any> {
-  if (!input || typeof input !== "object" || Array.isArray(input)) return {};
-  const out: Record<string, any> = {};
-  for (const [k, v] of Object.entries(input)) {
-    if (v == null) continue;
-    if (TEXT_FIELDS.has(k)) {
-      const s = flatten(v);
-      if (s) out[k] = s;
-      continue;
-    }
-    if (LIST_FIELDS.has(k)) {
-      const list = (Array.isArray(v) ? v.map(flatten) : flatten(v).split(/[\n,؛;|]+/))
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .filter((s) => k !== "competitors" || !isPlaceholderName(s));
-      if (list.length) out[k] = list;
-      continue;
-    }
-    out[k] = v;
-  }
-  return out;
 }
 
 function toolsDescription(): string {
