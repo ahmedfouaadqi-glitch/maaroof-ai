@@ -30,7 +30,7 @@ export type TrafficChannel =
 export type EvidenceConfidence = "high" | "medium" | "low";
 
 export const AttributionEventSchema = z.object({
-  eventId: z.string().min(1).max(160),
+  eventId: z.string().min(1).max(240),
   occurredAt: z.string().datetime(),
   workspaceId: z.string().uuid().nullable(),
   sessionId: z.string().min(1).max(160).nullable(),
