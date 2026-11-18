@@ -301,8 +301,6 @@ export function aggregateRevenue(inputs: unknown[]): {
       duplicateConversionIds.push(dedupeKey);
       continue;
     }
-    seen.add(dedupeKey);
-
     const key = conversion.workspaceId + ":" + conversion.currency;
     const summary = groups.get(key) || {
       workspaceId: conversion.workspaceId,
@@ -322,6 +320,8 @@ export function aggregateRevenue(inputs: unknown[]): {
       rejected.push({ externalId: conversion.conversionId, code: "invalid_record", message: "Revenue value exceeds currency precision or safe integer limits." });
       continue;
     }
+
+    seen.add(dedupeKey);
 
     if (conversion.status === "confirmed") {
       const nextTotalMinor = summary.confirmedRevenueMinor + minorUnits;
