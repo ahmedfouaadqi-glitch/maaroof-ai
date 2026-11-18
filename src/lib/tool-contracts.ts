@@ -45,7 +45,6 @@ const API_PATHS: Partial<Record<ToolKey, string>> = {
 };
 
 const INTERNAL_TOOLS = new Set<ToolKey>(["translate", "teach_space"]);
-const AGENT_ONLY_TOOLS = new Set<ToolKey>(["agent.command", "agent.run_targets", "agent.visibility"]);
 const PAUSED_TOOLS = new Set<ToolKey>(["competitor_monitor"]);
 
 export const TOOL_PATH_ALIASES: Record<string, ToolKey> = {
