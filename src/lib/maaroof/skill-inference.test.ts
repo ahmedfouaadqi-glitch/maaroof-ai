@@ -20,6 +20,7 @@ describe("inferSkills", () => {
   });
   it("search_visibility_strategy is wired to existing executable tools", () => {
     expect(executableToolsFor(["search_visibility_strategy"])).toEqual([
+      "keyword_intelligence",
       "analyze",
       "research",
       "compare",
@@ -29,6 +30,10 @@ describe("inferSkills", () => {
       "applied_ranking",
     ]);
   });
+  it("keeps internal knowledge training executable through plan validation", () => {
+    expect(executableToolsFor(["knowledge_training"])).toEqual(["teach_space"]);
+  });
+
   it("keeps competitor analysis available without exposing paused monitoring", () => {
     expect(executableToolsFor(["smart_competitor"])).toEqual(["compare"]);
     expect(executableToolsFor(["competitor_gap"])).toEqual(["compare"]);
