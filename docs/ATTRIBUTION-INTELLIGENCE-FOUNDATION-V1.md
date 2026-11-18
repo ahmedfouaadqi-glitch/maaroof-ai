@@ -93,7 +93,8 @@ No raw IP address is included in this initial contract. Do not add it by default
   OAuth scope; token acquisition/refresh, property discovery and app wiring are not implemented.
 - **A3 — Conversion and revenue normalization:** confirmed/pending/reversed
   conversion normalization, duplicate guards, currency-separated aggregation,
-  explicit source-event membership, and provider-ID namespacing. Pure functions are added.
+  separate confirmed/pending/reversed amounts, explicit source-event membership,
+  and provider-ID namespacing. Pure functions are added.
 - **Sessionization:** supplied session IDs are grouped without inventing sessions;
   crawler-marked sessions are excluded from non-crawler session counts.
 - **A4 — MAAROOF integration:** a workspace-scoped report projection is added,
