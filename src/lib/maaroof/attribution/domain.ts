@@ -219,11 +219,12 @@ export function attributeConversion(
   conversion: Conversion,
   touchpoints: Touchpoint[],
   model: AttributionModel,
-  options: { halfLifeDays?: number } = {},
+  options: { halfLifeDays?: number; eligibleEventIds?: readonly string[] } = {},
 ): AttributionResult {
   const eligible = touchpoints
     .filter((touch) =>
       touch.workspaceId === conversion.workspaceId
+      && (!options.eligibleEventIds || options.eligibleEventIds.includes(touch.eventId))
       && touch.channel !== "crawler"
       && Number.isFinite(Date.parse(touch.occurredAt))
       && Date.parse(touch.occurredAt) <= Date.parse(conversion.occurredAt),
