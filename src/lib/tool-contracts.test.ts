@@ -36,6 +36,7 @@ describe("canonical tool execution contracts", () => {
     expect(TOOL_CONTRACTS.known.output?.transport).toBe("sse");
     expect(TOOL_CONTRACTS.known.output?.successKind).toBe("event_stream");
     expect(TOOL_CONTRACTS.competitor_monitor.output?.successKind).toBe("paused_response");
+    expect(TOOL_CONTRACTS.competitor_monitor.output?.successFields).toContain("skipped");
   });
 
   it("documents the input surface for internal tools without adding fake API routes", () => {
