@@ -113,6 +113,7 @@ export function buildAttributionProjection(
   const touchpoints: Touchpoint[] = traffic.map((item) => ({
     eventId: item.event.eventId,
     workspaceId: item.event.workspaceId,
+    sessionId: item.event.sessionId,
     occurredAt: item.event.occurredAt,
     channel: item.classification.channel,
     source: item.classification.source,
@@ -139,7 +140,7 @@ export function buildAttributionProjection(
       } satisfies Conversion,
       touchpoints,
       input.model,
-      { eligibleEventIds: conversion.sourceEventIds },
+      { eligibleEventIds: conversion.sourceEventIds, eligibleSessionId: conversion.sessionId ?? undefined },
     );
 
     if (result.unattributed) {
