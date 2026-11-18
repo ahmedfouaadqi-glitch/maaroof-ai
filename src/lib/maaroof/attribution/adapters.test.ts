@@ -176,6 +176,15 @@ describe("buildAttributionProjection", () => {
     expect(projection.channelAttribution[0].attributedRevenue).toBe(100);
   });
 
+  it("rejects malformed workspace IDs before building a report", () => {
+    expect(() => buildAttributionProjection({
+      workspaceId: "not-a-workspace",
+      model: "last_touch",
+      traffic: [],
+      conversions: [],
+    })).toThrow("invalid_attribution_workspace_id");
+  });
+
   it("does not claim sessions and reports missing source limitations", () => {
     const projection = buildAttributionProjection({
       workspaceId,
