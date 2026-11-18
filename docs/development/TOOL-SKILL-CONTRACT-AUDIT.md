@@ -152,3 +152,11 @@
 - في run 44420833674 (commit 137eb0604ef22125da9987d1ecbc33ce0f5ffb86): نجح install؛ 144 test files passed وواحدة failed؛ 743 tests passed و3 skipped. الفشل الوحيد بقي attribution/domain.test.ts بسبب domain.ts المحذوف بواسطة revert 70095aa9. هذا يعني أن suite الجديدة الخاصة بالعقود والـ regression اجتازت التشغيل في هذا run.
 - أضيف شرط build step ليعمل بعد نجاح install حتى لو فشلت unit tests، بدلاً من تخطيه بسبب test failure. run 44420981714 بدأ تشغيل build مستقلاً بعد فشل الاختبارات؛ لم يُسجل نجاحه بعد عند آخر مراجعة.
 - run 44421120229 على التغييرات الأحدث كان قيد التشغيل؛ لا تُسجل نتيجته قبل اكتماله.
+
+## 14. توحيد metadata الخاصة بإكمال المدخلات
+
+- أضيفت إلى ToolOptions خصائص brandField وrequiredFields وrequiredAnyOf وminLength. أصبحت agent-input.ts تشتق اسم حقل الكيان والحقول المطلوبة وحدود الطول من TOOL_OPTIONS بدلاً من خرائط BRAND_KEYS/REQUIRED_FIELDS المكررة.
+- بقي REQUIRED_FIELDS كتصدير متوافق للخلف، لكنه أصبح مشتقاً من metadata.
+- analyze يتطلب text بطول 20 حرفاً على الأقل؛ geo_rewrite يتطلب text بطول 25؛ suggest يقبل أحد description أو sourceText أو imageBase64؛ keyword_intelligence يقبل brand أو site صالحاً ببروتوكول HTTP(S).
+- تم تعديل رسالة الاستيضاح الخاصة بالنص لتكون عامة لتحليل المحتوى أو إعادة صياغته، بدلاً من ربطها حصراً بـ GEO rewrite.
+- أضيفت اختبارات regression لهذه الشروط. لا تُسجل نتيجة تشغيلها إلا من CI run على commit يحتوي هذه التغييرات.
