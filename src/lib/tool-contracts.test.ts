@@ -25,6 +25,19 @@ describe("canonical tool execution contracts", () => {
     expect([...getApiToolPaths()].sort()).toEqual([...DIRECT_DISPATCH_PATHS].sort());
   });
 
+  it("defines an observed output envelope for every API contract", () => {
+    for (const contract of Object.values(TOOL_CONTRACTS).filter((item) => item.execution === "api")) {
+      expect(contract.output, contract.key).not.toBeNull();
+      expect(contract.output?.errorField, contract.key).toBe("error");
+      if (contract.availability === "active") {
+        expect(contract.output?.successFields.length, contract.key).toBeGreaterThan(0);
+      }
+    }
+    expect(TOOL_CONTRACTS.known.output?.transport).toBe("sse");
+    expect(TOOL_CONTRACTS.known.output?.successKind).toBe("event_stream");
+    expect(TOOL_CONTRACTS.competitor_monitor.output?.successKind).toBe("paused_response");
+  });
+
   it("keeps special execution modes out of ordinary plan steps", () => {
     const selectable = getPlannerSelectableToolKeys();
     expect(selectable).toContain("translate");
