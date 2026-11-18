@@ -222,3 +222,15 @@
 - حقل الخطأ `error`، بما في ذلك payload خطأ SSE.
 
 أضيف اختبار يضمن وجود output contract لكل API key، ويثبت نوع نقل `known`، وحالة `competitor_monitor` المتوقفة. هذه metadata وصفية مبنية على مخرجات route المرصودة؛ لا تتحقق من payload runtime ولا تفرض schema على استجابات النماذج الديناميكية. ما زالت بعض الحقول الداخلية الديناميكية بحاجة إلى توثيق تفصيلي عند الحاجة، ولا يُدعى اكتمال schema لكل نتيجة.
+
+
+## 20. إكمال مدخلات ومخرجات الأدوات الداخلية
+
+- أضيفت metadata مدخلات داخلية منفصلة عن `TOOL_OPTIONS` حتى لا يتغير اختبار تطابق TOOL_OPTIONS مع API routes:
+  - `translate`: مدخل اختياري `target_lang`، وسياق اللغة والنتائج السابقة.
+  - `teach_space`: لا يعلن مدخلات planner؛ يعتمد على الهدف والنتائج السابقة وسياق مساحة العمل.
+- أضيفت output contracts داخلية:
+  - `translate`: `target_lang`, `text`, `charged`.
+  - `teach_space`: `saved_facts`.
+- أصبح اختبار العقد يتحقق من وجود output لكل أداة skillExecutable، ومن وجود input metadata للأدوات الداخلية دون اختلاق API path.
+- تظل مخرجات العقود وصفية وليست runtime validators، كما أن تكلفة الأداة وصلاحياتها التفصيلية لم تُحوّل بعد إلى حقول مركزية موثقة.
