@@ -311,15 +311,3 @@ export function aggregateRevenue(inputs: unknown[]): {
 
   return { summaries: [...groups.values()], rejected, duplicateConversionIds };
 }
-
-/** Read-only connector interface; implementations must not request write scopes. */
-export type Ga4ReadAdapter = {
-  provider: "ga4";
-  readReport(input: {
-    propertyId: string;
-    startDate: string;
-    endDate: string;
-    dimensions: readonly ["sessionSource", "sessionMedium", "sessionCampaignName", "pageReferrer", "landingPagePlusQueryString"];
-    metrics: readonly ["sessions", "keyEvents", "totalRevenue"];
-  }): Promise<{ rows: Ga4ReportRow[]; currencyCode?: string; warnings: string[] }>;
-};
