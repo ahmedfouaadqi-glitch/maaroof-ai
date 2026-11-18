@@ -2,13 +2,10 @@
 // Evidence-only — every chosen skill carries the exact words that triggered it.
 // No match => clarify (never guess).
 import { MAAROOF_SKILLS, recommendMaaroofSkills } from "./skill-catalog";
+import { getSkillExecutableToolKeys } from "@/lib/tool-contracts";
 
-/** Tools that have a real executable route in the orchestrator. */
-export const EXECUTABLE_TOOLS = new Set([
-  "suggest", "geo_rewrite", "analyze", "research", "feasibility", "bizdev", "brand_boost", "what_if",
-  "applied_ranking", "visibility", "social_analysis", "compare", "company_email", "geo_strategist",
-  "brand_authority", "known", "translate", "teach_space",
-]);
+/** Derived from the canonical execution contracts; paused/special keys stay excluded. */
+export const EXECUTABLE_TOOLS = new Set<string>(getSkillExecutableToolKeys());
 
 export type SkillInference =
   | { kind: "selected"; skills: string[]; reasons: Record<string, string> }
