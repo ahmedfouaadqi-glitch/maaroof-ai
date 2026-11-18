@@ -177,3 +177,11 @@
 - Vitest: 144 files passed, 1 failed; 746 tests passed, 3 skipped (749 total). The only failure is still the pre-existing attribution/domain.test.ts import of the reverted source file.
 - Build: client, SSR and Nitro all succeeded with the 4GB Node heap setting (17.56s, 7.78s, 22.32s respectively).
 - This run includes the centralized brandField/requiredFields/requiredAnyOf/minLength metadata, analyze 20-character source requirement, suggest source alternatives, keyword identity fallback and corresponding tests. Therefore these tests and production build passed on this commit; overall workflow remains red only due to the unrelated attribution baseline defect.
+
+## 15. CI run 44422028713 — TypeScript and production build
+
+- Commit: c41364810e602cc3a41a8c7b64b12e6d7df84089.
+- Vitest: 144 test files passed, 1 failed (145 total); 746 tests passed and 3 skipped (749 total). The only failing test file is attribution/domain.test.ts importing the reverted ./domain module.
+- TypeScript: the check ran and reported only errors in the same attribution test file: TS2307 for missing ./domain, followed by TS7006 implicit-any errors for callback parameters whose types depend on that missing module. No TypeScript errors were reported in the modified contract/orchestrator/agent-input files.
+- Production build: client 22.57s, SSR 11.41s, Nitro 27.48s; all succeeded with NODE_OPTIONS=--max-old-space-size=4096.
+- Conclusion: the run remains failure due the known attribution source/revert inconsistency. The contract changes pass Vitest; the new typecheck is blocked by the same baseline missing file; production build passes.
