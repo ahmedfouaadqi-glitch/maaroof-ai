@@ -179,6 +179,39 @@ describe("buildAttributionProjection", () => {
     expect(projection.channelAttribution[0].attributedRevenue).toBe(100);
   });
 
+  it("keeps pending and reversed conversions out of confirmed attribution", () => {
+    const projection = buildAttributionProjection({
+      workspaceId,
+      model: "last_touch",
+      traffic: [],
+      conversions: [
+        {
+          conversionId: "pending-1",
+          workspaceId,
+          occurredAt: "2026-02-02T10:00:00.000Z",
+          sourceEventIds: [],
+          value: 20,
+          currency: "USD",
+          status: "pending",
+        },
+        {
+          conversionId: "reversed-1",
+          workspaceId,
+          occurredAt: "2026-02-02T10:00:00.000Z",
+          sourceEventIds: [],
+          value: 30,
+          currency: "USD",
+          status: "reversed",
+        },
+      ],
+    });
+    expect(projection.counts.confirmedConversions).toBe(0);
+    expect(projection.counts.pendingConversions).toBe(1);
+    expect(projection.counts.reversedConversions).toBe(1);
+    expect(projection.counts.unattributedConversions).toBe(0);
+    expect(projection.channelAttribution).toHaveLength(0);
+  });
+
   it("rejects malformed workspace IDs before building a report", () => {
     expect(() => buildAttributionProjection({
       workspaceId: "not-a-workspace",
