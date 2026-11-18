@@ -169,3 +169,11 @@
 - Production build succeeded after setting NODE_OPTIONS=--max-old-space-size=4096. Client build completed in 26.66s, SSR in 10.62s, Nitro in 26.74s.
 - This confirms the 4GB Node heap setting resolves the observed 2GB heap OOM on that commit. The overall workflow conclusion remains failure only because the known attribution suite fails.
 - This run includes the canonical execution registry, tool/skill routing changes, input identity metadata, and their initial regression tests. It predates the later analyze/suggest required-input refinements; those are being checked by subsequent runs.
+
+
+### CI run 44421646404 — required-input metadata verified
+
+- Commit: 1172250b64338081bcb33285cf958d4bd35c2b23.
+- Vitest: 144 files passed, 1 failed; 746 tests passed, 3 skipped (749 total). The only failure is still the pre-existing attribution/domain.test.ts import of the reverted source file.
+- Build: client, SSR and Nitro all succeeded with the 4GB Node heap setting (17.56s, 7.78s, 22.32s respectively).
+- This run includes the centralized brandField/requiredFields/requiredAnyOf/minLength metadata, analyze 20-character source requirement, suggest source alternatives, keyword identity fallback and corresponding tests. Therefore these tests and production build passed on this commit; overall workflow remains red only due to the unrelated attribution baseline defect.
