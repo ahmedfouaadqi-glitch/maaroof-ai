@@ -48,12 +48,15 @@ export function normalizeToolInput(tool: string, raw: unknown): Record<string, u
     if (value == null) continue;
     const declaredType = fieldTypes[key];
 
-    if (declaredType === "string" || declaredType === "string|number") {
-      if (declaredType === "string|number" && typeof value === "number" && Number.isFinite(value)) out[key] = value;
-      else {
-        const text = flatten(value);
-        if (text) out[key] = text;
-      }
+    if (declaredType === "string|number") {
+      if (typeof value === "number" && Number.isFinite(value)) out[key] = value;
+      else if (typeof value === "string" && value.trim()) out[key] = value.trim();
+      else out[key] = value;
+      continue;
+    }
+    if (declaredType === "string") {
+      const text = flatten(value);
+      if (text) out[key] = text;
       continue;
     }
     if (declaredType === "string[]") {
