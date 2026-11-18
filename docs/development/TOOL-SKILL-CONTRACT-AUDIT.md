@@ -160,3 +160,12 @@
 - analyze يتطلب text بطول 20 حرفاً على الأقل؛ geo_rewrite يتطلب text بطول 25؛ suggest يقبل أحد description أو sourceText أو imageBase64؛ keyword_intelligence يقبل brand أو site صالحاً ببروتوكول HTTP(S).
 - تم تعديل رسالة الاستيضاح الخاصة بالنص لتكون عامة لتحليل المحتوى أو إعادة صياغته، بدلاً من ربطها حصراً بـ GEO rewrite.
 - أضيفت اختبارات regression لهذه الشروط. لا تُسجل نتيجة تشغيلها إلا من CI run على commit يحتوي هذه التغييرات.
+
+### CI run 44421531884 — verified build baseline
+
+- Commit: 1ebf5cfd08afe2fc640b00dd64e2c5577a8f7ff6.
+- Install succeeded.
+- Vitest: 144 test files passed, 1 failed (145 total); 745 tests passed, 3 skipped (748 total). The only failed suite remains attribution/domain.test.ts importing the reverted ./domain module.
+- Production build succeeded after setting NODE_OPTIONS=--max-old-space-size=4096. Client build completed in 26.66s, SSR in 10.62s, Nitro in 26.74s.
+- This confirms the 4GB Node heap setting resolves the observed 2GB heap OOM on that commit. The overall workflow conclusion remains failure only because the known attribution suite fails.
+- This run includes the canonical execution registry, tool/skill routing changes, input identity metadata, and their initial regression tests. It predates the later analyze/suggest required-input refinements; those are being checked by subsequent runs.
