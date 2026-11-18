@@ -11,7 +11,7 @@ const LABELS: Record<ExportLang, {
   currency: string;
   trafficEvents: string;
   duplicateEvents: string;
-  humanSessions: string;
+  nonCrawlerSessions: string;
   aiReferralSessions: string;
   crawlerSessions: string;
   eventsWithoutSessionId: string;
@@ -35,7 +35,7 @@ const LABELS: Record<ExportLang, {
     currency: "العملة",
     trafficEvents: "أحداث الزيارات المسجلة",
     duplicateEvents: "الأحداث المكررة المستبعدة",
-    humanSessions: "الجلسات البشرية",
+    nonCrawlerSessions: "الجلسات غير المصنفة كزواحف",
     aiReferralSessions: "جلسات إحالة AI",
     crawlerSessions: "جلسات الزواحف",
     eventsWithoutSessionId: "أحداث بلا معرّف جلسة",
@@ -59,7 +59,7 @@ const LABELS: Record<ExportLang, {
     currency: "Currency",
     trafficEvents: "Recorded traffic events",
     duplicateEvents: "Duplicate events excluded",
-    humanSessions: "Human sessions",
+    nonCrawlerSessions: "Sessions without crawler markers",
     aiReferralSessions: "AI referral sessions",
     crawlerSessions: "Crawler sessions",
     eventsWithoutSessionId: "Events without session ID",
@@ -83,7 +83,7 @@ const LABELS: Record<ExportLang, {
     currency: "دراو",
     trafficEvents: "ڕووداوەکانی هاتووچۆی تۆمارکراو",
     duplicateEvents: "ڕووداوە دووبارەکان لابراون",
-    humanSessions: "دانیشتنە مرۆییەکان",
+    nonCrawlerSessions: "دانیشتنە بێ نیشانەی کراولەر",
     aiReferralSessions: "دانیشتنەکانی ئاماژەی AI",
     crawlerSessions: "دانیشتنەکانی کراولەر",
     eventsWithoutSessionId: "ڕووداوەکانی بێ ناسنامەی دانیشتن",
@@ -116,7 +116,7 @@ export function toAttributionExportSections(
       [labels.status, statusLabel(projection.measurementStatus, lang)],
       [labels.trafficEvents, projection.counts.acceptedTrafficEvents],
       [labels.duplicateEvents, projection.counts.duplicateTrafficEventsExcluded],
-      [labels.humanSessions, projection.counts.humanSessions],
+      [labels.nonCrawlerSessions, projection.counts.nonCrawlerSessions],
       [labels.aiReferralSessions, projection.counts.aiReferralSessions],
       [labels.crawlerSessions, projection.counts.crawlerSessions],
       [labels.eventsWithoutSessionId, projection.counts.eventsWithoutSessionId],
