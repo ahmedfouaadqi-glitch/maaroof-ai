@@ -17,6 +17,23 @@ describe("classifyTrafficSource", () => {
     expect(result.evidence).toBe("utm");
   });
 
+  it("keeps GA4 Direct / None labels classified as Direct", () => {
+    expect(classifyTrafficSource({ utmSource: "(direct)", utmMedium: "(none)" }).channel).toBe("direct");
+  });
+
+  it("does not treat a same-host navigation referrer as a new referral source", () => {
+    const result = classifyTrafficSource({
+      referrerUrl: "https://shop.example.com/products",
+      landingUrl: "https://shop.example.com/cart",
+    });
+    expect(result.channel).toBe("direct");
+    expect(result.source).toBe("(same-site)");
+  });
+
+  it("keeps provider not-set labels unknown rather than direct", () => {
+    expect(classifyTrafficSource({ utmSource: "(not set)", utmMedium: "(not set)" }).channel).toBe("unknown");
+  });
+
   it("does not infer AI traffic from a missing referrer", () => {
     const result = classifyTrafficSource({});
     expect(result.channel).toBe("direct");
