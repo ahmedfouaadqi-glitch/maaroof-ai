@@ -74,6 +74,7 @@ export async function readGa4AttributionReport(
   let currencyCode: string | undefined;
   let offset = 0;
   let expectedRowCount: number | undefined;
+  let rawRowsRead = 0;
   let page = 0;
 
   while (page < maxPages) {
@@ -99,6 +100,7 @@ export async function readGa4AttributionReport(
 
     const payload = await response.json() as Ga4ApiResponse;
     const rawRows = Array.isArray(payload.rows) ? payload.rows : [];
+    rawRowsRead += rawRows.length;
     if (typeof payload.rowCount === "number" && Number.isFinite(payload.rowCount)) {
       expectedRowCount = payload.rowCount;
     }
@@ -116,7 +118,7 @@ export async function readGa4AttributionReport(
     if (expectedRowCount !== undefined && offset >= expectedRowCount) break;
   }
 
-  if (expectedRowCount !== undefined && rows.length < expectedRowCount) {
+  if (expectedRowCount !== undefined && rawRowsRead < expectedRowCount) {
     warnings.push("The configured pagination limit was reached before all GA4 rows were read.");
   } else if (page === maxPages && expectedRowCount === undefined) {
     warnings.push("The configured pagination limit was reached; GA4 did not provide a row count.");
