@@ -176,8 +176,16 @@ export function fillToolInput(tool: string, input: any, ctx: EntityContext): Rec
 /** Required fields still empty after filling. */
 export function missingFields(tool: string, input: Record<string, any>): string[] {
   if (tool === "keyword_intelligence") {
-    // The endpoint can derive a brand from an explicit site URL; otherwise it needs a brand.
-    return str(input.brand) || str(input.site) ? [] : ["brand"];
+    // The endpoint can derive a brand from a valid explicit site URL; otherwise it needs a brand.
+    const site = str(input.site);
+    let validSite = false;
+    if (site) {
+      try {
+        const url = new URL(site);
+        validSite = (url.protocol === "http:" || url.protocol === "https:") && !!url.hostname;
+      } catch {}
+    }
+    return str(input.brand) || validSite ? [] : ["brand"];
   }
   return (REQUIRED_FIELDS[tool] || []).filter((k) => str(input[k]).length < (tool === "geo_rewrite" && k === "text" ? MIN_REWRITE_SOURCE_LENGTH : 2));
 }
