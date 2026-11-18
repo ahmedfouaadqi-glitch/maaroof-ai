@@ -56,6 +56,10 @@ describe("classifyTrafficSource", () => {
     expect(classifyTrafficSource({ userAgent: "Mozilla/5.0 (compatible; ExampleBrowser/1.0)" }).channel).toBe("direct");
   });
 
+  it("recognizes regional Google search domains", () => {
+    expect(classifyTrafficSource({ referrerUrl: "https://www.google.iq/search?q=brand" }).channel).toBe("organic_search");
+  });
+
   it("recognizes organic search referrers", () => {
     expect(classifyTrafficSource({ referrerUrl: "https://www.google.com/search?q=brand" }).channel).toBe("organic_search");
   });
