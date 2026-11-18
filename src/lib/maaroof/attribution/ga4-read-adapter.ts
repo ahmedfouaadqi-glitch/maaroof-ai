@@ -10,8 +10,6 @@ const GA4_DIMENSIONS = [
   "sessionSource",
   "sessionMedium",
   "sessionCampaignName",
-  "pageReferrer",
-  "landingPagePlusQueryString",
 ] as const;
 
 const GA4_METRICS = ["sessions", "keyEvents", "totalRevenue"] as const;
