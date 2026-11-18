@@ -116,6 +116,12 @@ describe("attributeConversion", () => {
     }
   });
 
+  it("falls back to a valid half-life when the supplied value is invalid", () => {
+    const result = attributeConversion(conversion, touches, "time_decay", { halfLifeDays: Number.NaN });
+    expect(result.credits.every((item) => Number.isFinite(item.credit))).toBe(true);
+    expect(result.credits.reduce((sum, item) => sum + item.credit, 0)).toBeCloseTo(1, 10);
+  });
+
   it("returns an explicit unattributed result when no eligible touchpoint exists", () => {
     const result = attributeConversion({ ...conversion, workspaceId: "33333333-3333-4333-8333-333333333333" }, touches, "last_touch");
     expect(result.unattributed).toBe(true);
