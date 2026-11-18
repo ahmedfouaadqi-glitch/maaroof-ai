@@ -28,7 +28,7 @@ describe("summarizeSessions", () => {
       normalized({ externalId: "second", occurredAt: "2026-02-01T10:01:00.000Z" }),
       normalized({ externalId: "third", sessionId: "session-2", source: "google", medium: "organic" }),
     ], workspaceId);
-    expect(summary.humanSessions).toBe(2);
+    expect(summary.nonCrawlerSessions).toBe(2);
     expect(summary.aiReferralSessions).toBe(1);
     expect(summary.eventsWithoutSessionId).toBe(0);
   });
@@ -38,7 +38,7 @@ describe("summarizeSessions", () => {
       normalized({ provider: "first_party", sessionId: "shared-id" }),
       normalized({ provider: "manual", sessionId: "shared-id", externalId: "manual-event" }),
     ], workspaceId);
-    expect(summary.humanSessions).toBe(2);
+    expect(summary.nonCrawlerSessions).toBe(2);
   });
 
   it("does not count sessions without explicit session IDs", () => {
@@ -46,16 +46,16 @@ describe("summarizeSessions", () => {
       normalized({ sessionId: null }),
       normalized({ externalId: "second", sessionId: null }),
     ], workspaceId);
-    expect(summary.humanSessions).toBe(0);
+    expect(summary.nonCrawlerSessions).toBe(0);
     expect(summary.eventsWithoutSessionId).toBe(2);
   });
 
-  it("excludes crawler-marked sessions from human session totals", () => {
+  it("excludes crawler-marked sessions from non-crawler session totals", () => {
     const summary = summarizeSessions([
       normalized({ externalId: "human", userAgent: "Mozilla/5.0 Chrome/120" }),
       normalized({ externalId: "crawler", userAgent: "Mozilla/5.0 GPTBot/1.0" }),
     ], workspaceId);
-    expect(summary.humanSessions).toBe(0);
+    expect(summary.nonCrawlerSessions).toBe(0);
     expect(summary.crawlerSessions).toBe(1);
   });
 
@@ -64,6 +64,6 @@ describe("summarizeSessions", () => {
       normalized(),
       normalized({ externalId: "other", workspaceId: "22222222-2222-4222-8222-222222222222", sessionId: "session-2" }),
     ], workspaceId);
-    expect(summary.humanSessions).toBe(1);
+    expect(summary.nonCrawlerSessions).toBe(1);
   });
 });
