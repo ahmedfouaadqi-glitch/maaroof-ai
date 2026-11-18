@@ -4,6 +4,8 @@ import {
   type Ga4RowMapping,
 } from "./adapters";
 
+export const GA4_READONLY_SCOPE = "https://www.googleapis.com/auth/analytics.readonly";
+
 const GA4_DIMENSIONS = [
   "sessionSource",
   "sessionMedium",
@@ -45,8 +47,8 @@ export type Ga4ReadReportResult = {
 /**
  * Read-only GA4 Data API adapter.
  *
- * OAuth token acquisition/refresh and secure credential storage are deliberately
- * outside this module. The caller supplies a short-lived access token and a
+ * The caller must obtain a token with GA4_READONLY_SCOPE. OAuth token
+ * acquisition/refresh and secure credential storage are deliberately outside this module. The caller supplies a short-lived access token and a
  * fetch implementation, which also makes the adapter deterministic in tests.
  */
 function isValidDate(value: string): boolean {
