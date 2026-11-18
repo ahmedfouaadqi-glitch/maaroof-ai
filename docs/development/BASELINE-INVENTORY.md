@@ -240,3 +240,45 @@
 **قراءة الحالة:** يوجد 8 PRs مفتوحة، منها 5 Draft و3 غير Draft. كون PR غير Draft لا يعني اجتياز التدقيق أو جاهزيته للدمج. الفروع غير المرتبطة بهذه PRs لا تزال بحاجة إلى تصنيف حسب آخر commit وdiff، ولا يُستنتج اكتمالها من اسم الفرع.
 
 **حدود الالتزام:** لم تتم قراءة أو تعديل migrations أو سياسات قاعدة البيانات أو ملفات Supabase، ولم تتم مراجعة .env أو الأسرار أو ملفات مزودي النماذج والاتصال. لا يُعتبر فحص metadata لطلبات الدمج مراجعة لهذه الملفات.
+## مراجعة مباشرة إضافية لفروع التطوير — 2026-11-19
+
+تمت مراجعة محتوى ملفات محددة من PRs #42 و#53 و#73 ومقارنة commits. هذه مراجعة انتقائية للمسارات المرتبطة بالخطة، وليست تدقيقاً كاملاً لكل ملف في كل فرع.
+
+### PR #73 — Attribution Intelligence foundation
+
+- مقارنة main مع feat/attribution-intelligence-foundation-v1 أظهرت أن الفرع متباعد: 128 commit ahead و5 behind، وأن ملفات attribution الـ18 مضافة على هذا الفرع.
+- ملف src/lib/maaroof/attribution/domain.test.ts موجود على main ويستورد ./domain، لكن src/lib/maaroof/attribution/domain.ts غير موجود على main.
+- تتبع commit محدد أكد أن commit 45aa0e22f26839960e0a67c42f880def40ff5e2d أضاف ملف الاختبار وحده، من دون ملف domain. ثم أضاف commit منفصل 051fba15c741a5957343d704dbe10e5732f69b9f ملف domain إلى فرع attribution. هذا يثبت تسلسل إدخال الاختبار دون مصدره على main؛ لا يثبت أن نقل الملف وحده هو الحل الصحيح أو أن بقية PR آمنة للدمج.
+- PR #73 ما زال Draft، ووصفه يصرح بأن الاختبارات وlint وTypeScript والبناء لم تُشغّل. لذلك لا يعتمد كإصلاح متحقق.
+- المراجعة الساكنة لملف domain تبين قواعد تصنيف UTM/referrer وUA، وخمسة نماذج attribution، مع منع cross-workspace واستبعاد crawler واللمسات اللاحقة للتحويل. المخرجات وصفية وليست سببية.
+- حد مهم: attributeConversion() يسمح افتراضياً بجمع اللمسات من أكثر من session داخل workspace نفسه إذا لم يمرر المستدعي eligibleSessionId أو eligibleEventIds. يجب أن تضمن طبقة projection/الاستدعاء قيد الرحلة المقصود؛ لا يكفي الاعتماد على الدالة وحدها.
+- sessionization.ts يعتمد session IDs المقدمة من المزود، ويستبعد الجلسة كاملة من non-crawler إذا احتوت حدث crawler واحداً؛ ويصرح بأن UA قابل للتزوير. لم يتم اختبار التنفيذ في بيئة تشغيل.
+
+### PR #42 — Keyword visibility and operational workbook
+
+- مقارنة الفرع مع main أظهرت 16 commit ahead و228 behind وحالة diverged؛ لا يصح التعامل معه كفرع متزامن جاهز للدمج.
+- ملفات التغيير تشمل operational-workbook.ts وkeyword-clusters.ts واختباراتهما وprobe-answer.ts، إضافة إلى تغييرات غير مرتبطة مباشرة بنطاق workbook في SiteHeader.tsx وsound.ts.
+- keyword-clusters.ts يجمع الكلمات وفق أول كلمة رأسية مشتركة بعد stop words؛ التعليق نفسه يوضح أن ذلك قاعدة نصية وليس تجميعاً دلالياً. يجب تسمية المخرجات clusters heuristic وعدم عرضها كعناقيد semantic مثبتة.
+- في keyword-clusters.ts، الدالتان answeredClusterCount() وbillableClusterCount() لهما التنفيذ نفسه حرفياً (كلتاهما تعدان status=answered)، رغم اختلاف الوصف: الأولى direct primary والثانية أي إجابة قابلة للفوترة. لا يوجد تمييز فعلي لمسار fallback.
+- clusterScore() لا يفلتر provider_path === fallback، وبالتالي يمكن أن تدخل إجابات fallback في قياس ظهور الكلمات داخل cluster.
+- shareOfVoice() يفلتر status === answered فقط، ولا يطبق شرط المسار primary رغم تعليق الدالة الذي يصف direct primary answers. هذا يخلق عدم اتساق مع منطق per-keyword الذي يستبعد fallback من بعض الحسابات.
+- probe-answer.ts يستخرج الروابط من حقول النموذج/النص، ثم linkSources() لا يعيد إلا عناصر من قائمة searchItems الفعلية؛ هذه حماية من اختراع سجل مصدر جديد، لكنها لا تثبت أن نتيجة البحث تدعم الادعاء أو أن ذكر النطاق/العلامة entailment صحيح. لا تعتبر Claim verification.
+- بعض اختبارات workbook تثبت الفصل بين unasked = Not measured وasked with no literal mention = 0/N، وهذه قاعدة عرض صحيحة من حيث عدم تحويل غير المقاس إلى صفر؛ لكن لا تغطي الاختبارات حالة fallback في cluster وshare-of-voice.
+- يجب إصلاح تمييز primary/fallback وتغطية الاختبارات قبل اعتماد هذه الحسابات كمقاييس ظهور.
+
+### PR #53 — External skill registry foundation
+
+- مقارنة الفرع مع main أظهرت 41 commit ahead و103 behind وحالة diverged.
+- تمت مراجعة external-skill-registry.ts وexecution-evidence-pack.ts وquality-evaluation.server.ts وعينات من الاختبارات/المواصفات.
+- سجل الحزم يعرّف 70 package variants و69 skill names، مع الاحتفاظ بنسختين من Humanizer. القيم المعلنة في stats تتسق مع هذا التصميم؛ لم يظهر تناقض عددي في الملف المفحوص.
+- كل الحزم تبقى candidate وreference_only وexecutionAllowed: false. ملفات الترخيص الموجودة موسومة review_required، والتي لا تحتوي license file موسومة unknown؛ لا يوجد اعتماد على أنها مرخصة لمجرد وجودها في السجل.
+- execution-evidence-pack.ts يصرح أن مخرجات الأدوات في التشغيل ليست تحققاً مستقلاً من المصادر، ويحافظ على الفشل/القيود والحدود الحجمية؛ هذا فصل سليم بين نجاح التنفيذ والتحقق الخارجي.
+- quality-evaluation.server.ts لا يصدر quality score؛ يصدر وقائع تشغيل قابلة للرصد ويضع معايير الجودة not_measured حتى تتوفر ground truth أو evaluators. هذا يمنع تحويل نجاح الأداة إلى صحة معرفية.
+- مقارنة الفرع أظهرت أيضاً تغييرات في SiteHeader.tsx وsound.ts وتعديلات في orchestrator.server.ts؛ يلزم فصلها ومراجعتها ضمن سياقها قبل أي قرار دمج. لا يعني نجاح CI المعلن في وصف PR أن كامل الفرع المتباعد آمن للدمج مع main الحالي.
+
+### أثر هذه المراجعة على خطة التطوير
+
+1. تُنقل فجوات fallback/primary في مقاييس PR #42 إلى سجل عيوب المرحلة الخامسة، ولا تُصلح ضمن المرحلة الأولى.
+2. تُسجل حدود Attribution وشرط same-session ضمن متطلبات مراجعة المرحلة الخامسة/الثالثة بحسب موضع الدمج، ولا يُنقل كود PR #73.
+3. تُستخدم مبادئ فصل execution evidence عن independent verification وunmeasured quality rubric كمرجع تصميمي في المرحلتين الثالثة والسادسة، دون نسخ الفرع أو اعتماد registry للتنفيذ.
+4. لا يُعتمد أي من PR #42 أو #53 أو #73 للدمج من هذه المراجعة؛ فروعها متباعدة، والمراجعة انتقائية، والتحقق التشغيلي غير مكتمل.
