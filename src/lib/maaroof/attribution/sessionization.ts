@@ -35,7 +35,7 @@ export function summarizeSessions(
       eventsWithoutSessionId += 1;
       continue;
     }
-    const key = workspaceId + ":" + sessionId;
+    const key = item.provider + ":" + workspaceId + ":" + sessionId;
     const group = groups.get(key) || [];
     group.push(item);
     groups.set(key, group);
