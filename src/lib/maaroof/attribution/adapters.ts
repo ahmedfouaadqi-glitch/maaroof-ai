@@ -245,7 +245,7 @@ export const ConversionInputSchema = z.object({
   conversionId: z.string().min(1).max(200),
   workspaceId: z.string().uuid(),
   occurredAt: z.string().datetime(),
-  sourceEventIds: z.array(z.string().min(1).max(160)).max(1000),
+  sourceEventIds: z.array(z.string().min(1).max(240)).max(1000),
   value: z.number().finite().nonnegative(),
   currency: z.string().regex(/^[A-Z]{3}$/),
   status: z.enum(["confirmed", "pending", "reversed"]),
