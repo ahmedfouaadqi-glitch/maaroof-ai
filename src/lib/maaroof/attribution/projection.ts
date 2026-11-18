@@ -34,6 +34,7 @@ export type AttributionProjection = {
   measurementStatus: "measured" | "partial" | "unknown";
   counts: {
     acceptedTrafficEvents: number;
+    duplicateTrafficEventsExcluded: number;
     humanSessions: number;
     aiReferralSessions: number;
     crawlerSessions: number;
@@ -63,13 +64,28 @@ type Bucket = {
 export function buildAttributionProjection(
   input: AttributionProjectionInput,
 ): AttributionProjection {
-  const traffic = input.traffic.filter(
+  const scopedTraffic = input.traffic.filter(
     (item) => item.event.workspaceId === input.workspaceId,
   );
+  const traffic: NormalizedTrafficRecord[] = [];
+  const seenEventIds = new Set<string>();
+  let duplicateTrafficEventsExcluded = 0;
+  const limitations: string[] = [];
+
+  for (const item of scopedTraffic) {
+    if (seenEventIds.has(item.event.eventId)) {
+      duplicateTrafficEventsExcluded += 1;
+      continue;
+    }
+    seenEventIds.add(item.event.eventId);
+    traffic.push(item);
+  }
+  if (duplicateTrafficEventsExcluded > 0) {
+    limitations.push("Duplicate traffic event IDs were excluded.");
+  }
 
   const parsedConversions: ConversionInput[] = [];
   const seenConversions = new Set<string>();
-  const limitations: string[] = [];
 
   for (const raw of input.conversions) {
     const parsed = ConversionInputSchema.safeParse(raw);
@@ -142,7 +158,7 @@ export function buildAttributionProjection(
   const crawlerMarkerEvents = traffic.filter((item) => item.classification.channel === "crawler").length;
   const measurementStatus = traffic.length === 0
     ? "unknown"
-    : limitations.length > 0 || unattributedConversions > 0
+    : limitations.length > 0 || unattributedConversions > 0 || sessions.eventsWithoutSessionId > 0
       ? "partial"
       : "measured";
 
@@ -159,6 +175,7 @@ export function buildAttributionProjection(
     measurementStatus,
     counts: {
       acceptedTrafficEvents: traffic.length,
+      duplicateTrafficEventsExcluded,
       humanSessions: sessions.humanSessions,
       aiReferralSessions: sessions.aiReferralSessions,
       crawlerSessions: sessions.crawlerSessions,
