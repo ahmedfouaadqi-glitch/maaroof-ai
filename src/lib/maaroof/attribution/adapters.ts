@@ -190,8 +190,6 @@ export type Ga4RowMapping = {
   sessionSource: string | null;
   sessionMedium: string | null;
   sessionCampaignName: string | null;
-  pageReferrer: string | null;
-  landingPage: string | null;
   sessions: number;
   keyEvents: number;
   totalRevenue: number | null;
@@ -200,7 +198,7 @@ export type Ga4RowMapping = {
 export function mapGa4ReportRow(row: Ga4ReportRow): Ga4RowMapping | null {
   const dimensions = row.dimensionValues || [];
   const metrics = row.metricValues || [];
-  if (dimensions.length < 5 || metrics.length < 3) return null;
+  if (dimensions.length < 3 || metrics.length < 3) return null;
 
   const sessions = asFiniteNumber(metrics[0]?.value);
   const keyEvents = asFiniteNumber(metrics[1]?.value);
@@ -215,8 +213,6 @@ export function mapGa4ReportRow(row: Ga4ReportRow): Ga4RowMapping | null {
     sessionSource: dimensions[0]?.value || null,
     sessionMedium: dimensions[1]?.value || null,
     sessionCampaignName: dimensions[2]?.value || null,
-    pageReferrer: dimensions[3]?.value || null,
-    landingPage: dimensions[4]?.value || null,
     sessions,
     keyEvents,
     totalRevenue,
@@ -227,7 +223,6 @@ export function classifyGa4Row(row: Ga4RowMapping): SourceClassification {
   return classifyTrafficSource({
     utmSource: row.sessionSource,
     utmMedium: row.sessionMedium,
-    referrerUrl: row.pageReferrer || undefined,
   });
 }
 
