@@ -1,0 +1,103 @@
+# تدقيق عقود الأدوات والمهارات — المرحلة الثانية
+
+> النطاق: مراجعة ساكنة لفرع main فقط. لم يُعدّل أي كود تطبيقي في هذا التدقيق.
+> القيود: لا Supabase/DB/RLS/Auth، لا .env/secrets، لا نماذج أو موصلات أو توجيه مزودي النماذج، لا merge ولا deploy.
+
+## 1. سجل الأعداد والتغطية
+
+| السجل | العدد | الملاحظة |
+|---|---:|---|
+| TOOL_CATALOG | 24 key | يتضمن أدوات، المنسق، أدوات داخلية ومفاتيح agent |
+| TOOL_OPTIONS | 18 key | بيانات وصفية للمدخلات والـ enums وليست JSON Schema كاملة |
+| MAAROOF_SKILLS | 21 skill | كل skill يعلن tool keys من الكتالوج |
+| EXECUTABLE_TOOLS | 18 key | allowlist مستقلة لإضافة أدوات المهارات تلقائياً |
+| toolPath() | 19 mapping | 18 مساراً فعلياً + alias competitor_compare إلى compare |
+| ROUTE_LOADERS | 18 route | تتطابق المسارات مع 18 مساراً فعلياً في toolPath |
+
+## 2. تصنيف نمط التنفيذ الحالي
+
+| الفئة | المفاتيح | الحالة |
+|---|---|---|
+| HTTP/API عبر in-process dispatch أو HTTP fallback | analyze, suggest, compare, known, feasibility, bizdev, research, visibility, brand_boost, company_email, applied_ranking, geo_strategist, social_analysis, what_if, brand_authority, geo_rewrite, keyword_intelligence | مسارات فعلية؛ toolPath وROUTE_LOADERS متطابقان في المسارات الـ18 |
+| API متوقف | competitor_monitor | مستبعد من reasoning validation وEXECUTABLE_TOOLS؛ orchestrator يتخطى الخطط القديمة قبل التنفيذ؛ endpoint يعيد temporarily_paused |
+| تنفيذ داخلي بلا endpoint | translate, teach_space | مدرجان في EXECUTABLE_TOOLS وينفذان داخل orchestrator |
+| منسق/مدخل رئيسي | maaroof | POST /api/maaroof، ليس خطوة فرعية عادية |
+| مفاتيح agent خاصة | agent.command, agent.run_targets, agent.visibility | لا تملك ToolOptions أو toolPath كأدوات فرعية |
+| alias | competitor_compare | ليس ToolKey؛ يوجّه إلى /api/compare |
+| واجهات مستقلة خارج ToolKey | security_scan, report | مسارات مساحة عمل مستقلة، لا تُضاف إلى كتالوج أدوات المنسق تلقائياً |
+
+## 3. عيب ربط مهارة مؤكد: keyword_intelligence
+
+- skill `search_visibility_strategy` تعلن الأدوات: keyword_intelligence, analyze, research, compare, known, visibility, geo_strategist, applied_ranking.
+- `keyword_intelligence` موجود في TOOL_CATALOG وTOOL_OPTIONS وtoolPath() وROUTE_LOADERS، وreasoning.server.ts يقبله ضمن TOOL_COVERAGE وTOOL_KEYS.
+- لكنه غائب عن EXECUTABLE_TOOLS؛ لذلك `executableToolsFor(["search_visibility_strategy"])` يعيده محذوفاً.
+- اختبار `skill-inference.test.ts` يثبت هذا الاستبعاد ويتوقع قائمة من سبع أدوات، أي إنه يثبت السلوك الحالي لكنه لا يثبت صحة اكتمال المهارة.
+- `agent-input.ts` لا يضع keyword_intelligence ضمن BRAND_KEYS أو REQUIRED_FIELDS. في وضع الحساب الرئيسي دون workspace، يمكن أن تختار chooseSkillsAutonomously المهارة اعتماداً على brand من profile، لكن هذا brand لا يُمرر تلقائياً إلى مدخل keyword_intelligence. endpoint /api/dual-result يحل الهوية من المدخلات أو workspace؛ إذا لم يوجد أي منهما قد يرجع brand_required.
+- الاستنتاج: هناك فجوة ربط بين تعريف المهارة والتنفيذ التلقائي وإكمال المدخلات. المعالجة المقترحة في المرحلة الثانية: إدراج الأداة في مصدر تنفيذ موحد، وإضافة mapping لحقول brand/site/category إلى سياق الكيان، وكتابة اختبارات للحساب الرئيسي والـ workspace قبل اعتماد الإصلاح.
+
+## 4. TOOL_OPTIONS ليست عقد تنفيذ موحداً
+
+- النوع الحالي يعرّف tabs وfields وenums فقط.
+- `describeToolOptions()` يستخدم fields في وصف التخطيط.
+- `enforceEnums()` يحذف القيم غير المقبولة في حقول enums فقط؛ لا يتحقق من أنواع كل حقل، ولا يرفض الحقول غير المعرفة، ولا يثبت أن الحقول المدرجة كلها تقرؤها endpoint.
+- `normalizeToolInput()` في orchestrator يطبّع مجموعات محددة من النصوص والقوائم، لكنه ليس validator عاماً ولا allowlist للحقول.
+- كل endpoint يحتفظ بمنطق قراءة/تحقق محلي خاص به؛ لذلك TOOL_OPTIONS حالياً مرجع planner/UI وليس contract schema ملزماً.
+
+### اختلافات مؤكدة بين الوصف وبعض ما تقرؤه endpoints
+
+| الأداة | حقول إضافية مرصودة في endpoint | الموجود في TOOL_OPTIONS |
+|---|---|---|
+| research | include_channels, channel_types | query, mode |
+| brand_boost | website_url | brand_name, brand_keywords, platforms |
+| social_analysis | official_website | brand, keywords |
+| keyword_intelligence (/api/dual-result) | content_language, request_text, text, target_market, geo_scope, live_search, live_search_limit, estimate_only, skip_keyword_pairs, skip_keywords, cluster_limit, sample_limit, markets، إضافة إلى حقول الهوية/المساحة | brand, site, category, competitors, market_text, attachment_id, lang |
+
+ملاحظة: بعض الحقول الإضافية أعلاه خيارات UI/قياس/سياق وليست بالضرورة مدخلات planner مناسبة. يجب تصنيفها إلى user-input أو workspace-derived أو system-injected أو UI-operation قبل نقلها إلى العقد الموحد. لا ينبغي إضافة كل حقل إلى prompt لمجرد أن endpoint يقرأه.
+
+## 5. حقول مطلوبة وإكمال السياق
+
+- `REQUIRED_FIELDS` في agent-input يغطي brand keys والأدوات research/suggest/geo_rewrite.
+- لا يغطي keyword_intelligence رغم أن endpoint قد يتطلب brand عندما لا يوجد workspace أو site أو workbook signals كافية.
+- لا يوجد حالياً تعريف واحد يجمع: required fields، أنواع الحقول، defaults، enum values، مصدر القيمة، وشرط التوضيح.
+- `fillToolInput()` يحافظ على قيمة planner ولا يستبدلها، ثم يملأ brand/keywords/site من السياق للأدوات التي لها mapping صريح. يجب أن تبقى هذه الأولوية ضمن أي عقد موحد.
+
+## 6. تصميم العقد المقترح للمرحلة الثانية
+
+تعريف سجل مركزي pure لكل مفتاح أداة يتضمن:
+
+1. `key` ثابتاً يطابق ToolKey.
+2. `status`: active | paused | internal | coordinator | agent_only.
+3. `execution.kind`: api | internal | coordinator، مع `path` وHTTP method للأدوات API فقط.
+4. `input`: الحقول وأنواعها وrequired/optional وenums وdefaults وحدود الطول.
+5. `input.source`: user | workspace | entity_profile | prior_tool | system، لتمييز ما يجب أن يملأه المستخدم عما يحقن تلقائياً.
+6. `output`: شكل أعلى مستوى وحقول النتيجة/الأدلة/الأخطاء المتوقعة، دون فرض schema غير مثبت على مخرجات النماذج.
+7. `skillExposure`: هل يجوز إدراجها تلقائياً من مهارة؟ ولماذا؟ مع منع paused/internal-only من المرور إلى endpoint.
+8. `tests`: مرجع لاختبارات العقد والتطابق بين registry وcatalog وskills وdispatch.
+
+### مبادئ تنفيذ
+
+- لا تُنشأ allowlists متكررة مستقلة إذا أمكن اشتقاقها من contract registry.
+- لا تُزال أي أداة أو حقل أو alias قبل توثيق استخدامه واختبار التكافؤ.
+- لا يتغير أي endpoint أو موصل نموذج أو ملف مزود ضمن هذه المرحلة.
+- لا تُحوّل حقول UI-only إلى prompt planner تلقائياً.
+- يظل competitor_monitor paused ولا يُعاد تفعيله.
+- يظل translate وteach_space داخليين ولا يُختلق لهما endpoint.
+- يظل maaroof منسقاً، وتظل agent.* مفاتيح خاصة.
+
+## 7. خطة الاختبارات المطلوبة قبل تعديل التنفيذ
+
+1. اختبار تطابق كل ToolCatalog key مع contract classification.
+2. اختبار أن كل API contract له path واحد وloader واحد، والعكس.
+3. اختبار أن كل skill tool إما executable أو مبرر صراحةً بأنه paused/internal/coordinator.
+4. اختبار أن كل أداة auto-injected لها required-input mapping واضح.
+5. اختبار أن fields/enums/defaults/types في العقد لا تتعارض مع قراءات endpoint الموثقة.
+6. اختبار خاص بـ keyword_intelligence في workspace mode وmain-account mode، مع حالات brand/site/attachment مفقودة.
+7. اختبار عدم إدراج competitor_monitor في الخطط القابلة للتنفيذ.
+8. اختبار أن translate وteach_space يظلان internal، ولا يمران إلى toolPath.
+
+## 8. القرارات المؤجلة
+
+- لم يُعدّل الكود بعد؛ هذه وثيقة تحليل.
+- لا قرار بتغيير schemas الخاصة بالـ endpoints قبل اكتمال مصفوفة المدخلات لكل route.
+- لا تغيير في CI أو معالجة revert attribution ضمن المرحلة الثانية.
+- لا تعديل على Supabase أو ملفات النماذج/المزودين.
