@@ -77,6 +77,18 @@ describe("GA4 mapping", () => {
     expect(row && classifyGa4Row(row).channel).toBe("ai_referral");
   });
 
+  it("rejects negative or fractional GA4 count metrics", () => {
+    const row = {
+      dimensionValues: Array.from({ length: 5 }, () => ({ value: "x" })),
+      metricValues: [{ value: "-1" }, { value: "1" }, { value: "0" }],
+    };
+    expect(mapGa4ReportRow(row)).toBeNull();
+    expect(mapGa4ReportRow({
+      ...row,
+      metricValues: [{ value: "1.5" }, { value: "1" }, { value: "0" }],
+    })).toBeNull();
+  });
+
   it("rejects incomplete or non-numeric GA4 rows", () => {
     expect(mapGa4ReportRow({ dimensionValues: [], metricValues: [] })).toBeNull();
   });
