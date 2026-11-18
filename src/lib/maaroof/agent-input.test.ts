@@ -11,6 +11,31 @@ describe("agent-input", () => {
   it("never overwrites planner values", () => {
     expect(fillToolInput("visibility", { brand: "X" }, { goalBrand: "G" }).brand).toBe("X");
   });
+
+  it("fills keyword intelligence identity from the active workspace", () => {
+    const filled = fillToolInput("keyword_intelligence", {}, {
+      workspace: { name: "Workspace Brand", brand_url: "https://example.com", profile: { industry: "Retail" } },
+    });
+    expect(filled.brand).toBe("Workspace Brand");
+    expect(filled.site).toBe("https://example.com");
+    expect(filled.category).toBe("Retail");
+    expect(missingFields("keyword_intelligence", filled)).toEqual([]);
+  });
+
+  it("fills keyword intelligence from account profile and accepts a site as identity", () => {
+    const filled = fillToolInput("keyword_intelligence", {}, {
+      profile: { brand_name: "Profile Brand", specialty: "Software", entity_links: ["https://profile.example"] },
+    });
+    expect(filled.brand).toBe("Profile Brand");
+    expect(filled.site).toBe("https://profile.example");
+    expect(filled.category).toBe("Software");
+    expect(missingFields("keyword_intelligence", filled)).toEqual([]);
+    expect(missingFields("keyword_intelligence", { site: "https://example.com" })).toEqual([]);
+  });
+
+  it("asks for brand or site when keyword intelligence has no identity context", () => {
+    expect(missingFields("keyword_intelligence", {})).toEqual(["brand"]);
+  });
   it("reports missing required fields", () => {
     expect(missingFields("visibility", fillToolInput("visibility", {}, {}))).toEqual(["brand"]);
     expect(missingFields("research", fillToolInput("research", {}, { goal: "best perfume shops" }))).toEqual([]);
