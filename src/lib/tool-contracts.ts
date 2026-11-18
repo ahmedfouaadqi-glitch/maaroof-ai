@@ -149,7 +149,7 @@ function buildContract(key: ToolKey): ToolExecutionContract {
     plannerSelectable,
     skillExecutable: plannerSelectable,
     authorizationOwner: availability === "paused" || execution === "agent_only" ? "none" : execution === "api" || execution === "coordinator" ? "route" : "orchestrator",
-    billingOwner: availability === "paused" || execution === "agent_only" || key === "teach_space"
+    billingOwner: availability === "paused" || execution === "agent_only"
       ? "none"
       : execution === "api" ? "route" : "orchestrator",
     options: TOOL_OPTIONS[key] || INTERNAL_OPTIONS[key] || null,
