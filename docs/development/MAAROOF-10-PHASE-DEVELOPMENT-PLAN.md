@@ -56,7 +56,7 @@
 - سجل عيوب مصنف حسب الشدة والأثر والدليل.
 - تسجيل نتائج الاختبارات الفعلية دون ادعاء نجاح غير منفذ.
 
-**الحالة:** لم تبدأ.
+**الحالة:** جزئية — الجرد الثابت ومطابقة dispatch الأولية موثقان؛ التحقق التشغيلي ومراجعة snapshots الفروع ما زالا غير مكتملين.
 
 ## المرحلة 2 — توحيد عقود الأدوات والمهارات
 
@@ -268,7 +268,7 @@
 
 | المرحلة | ما بدأ | ما اكتمل | ما تبقى | التحقق | الحالة |
 |---|---|---|---|---|---|
-| 1 | جرد main، تدقيق التعريب، مطابقة الأدوات والمهارات والخيارات والمسارات، مراجعة dispatch والاختبارات وCI | فهرسة 959 ملفاً؛ جرد 67 route و36 API و144 اختباراً؛ تشغيل i18n-audit؛ مطابقة 24 ToolKey/كتالوج و21 مهارة و18 خياراً و18 executable و19 toolPath؛ توثيق فجوة keyword_intelligence وحالة competitor_monitor والمسارات الداخلية | تشغيل Vitest وESLint وBuild؛ استكمال تدفق كل أداة من الواجهة إلى endpoint؛ فحص branch snapshots/diffs الكاملة | جزئي: i18n-audit نُفذ؛ TypeScript توقف لنقص vite/client؛ Vitest/ESLint/build غير متحققة لغياب Bun/dependencies؛ لا checks مرجعة لآخر main commit | جزئية |
+| 1 | جرد main، تدقيق التعريب، مطابقة الأدوات والمهارات والخيارات والمسارات، مراجعة dispatch والاختبارات وCI | فهرسة 959 ملفاً؛ جرد 67 route و36 API و144 اختباراً؛ تشغيل i18n-audit؛ مطابقة 24 ToolKey/سجل كتالوج و21 مهارة و18 خياراً و18 executable و19 toolPath؛ توثيق فجوة keyword_intelligence ومسار dual-result المباشر وحالة competitor_monitor والمسارات الداخلية؛ إثبات أن TOOL_OPTIONS.fields وصفية وليست allowlist runtime | تشغيل Vitest وESLint وBuild؛ استكمال تدفق واجهة المستخدم لكل أداة حتى endpoint والنتيجة؛ فحص branch snapshots/diffs الكاملة | جزئي: i18n-audit نُفذ؛ TypeScript توقف لنقص vite/client؛ Vitest/ESLint/build غير متحققة لغياب Bun/dependencies؛ لا checks مرجعة لآخر main commit | جزئية |
 | 2 | لم يبدأ | — | جميع مهام المرحلة | لم يُشغّل | لم تبدأ |
 | 3 | لم يبدأ | — | جميع مهام المرحلة | لم يُشغّل | لم تبدأ |
 | 4 | لم يبدأ | — | جميع مهام المرحلة | لم يُشغّل | لم تبدأ |
@@ -291,4 +291,6 @@
 ## سجل التحديثات
 
 - **2026-11-19:** إنشاء الخطة ذات المراحل العشر على فرع العمل قبل بدء تنفيذ التطوير.
-- **2026-11-19:** بدء المرحلة الأولى وتسجيل جرد خط الأساس في `docs/development/BASELINE-INVENTORY.md`. اكتمل جرد الملفات والمسارات وتدقيق التعريب ومطابقة سجلات الأدوات والمهارات والخيارات ومسارات dispatch والاختبارات ذات الصلة وملف CI. ثبت أن `keyword_intelligence` لا تصل من المهارة إلى التنفيذ بسبب غيابها عن `EXECUTABLE_TOOLS`، وأن `competitor_monitor` متوقفة ومستبعدة عمداً، وأن `translate` و`teach_space` تنفذان داخلياً. بقي التحقق التشغيلي الكامل ومراجعة محتويات الفروع. المرحلة الأولى «جزئية»، والمرحلة الثانية لم تبدأ.
+- **2026-11-19:** بدء المرحلة الأولى وتسجيل جرد خط الأساس في `docs/development/BASELINE-INVENTORY.md`. اكتمل جرد الملفات والمسارات وتدقيق التعريب ومطابقة سجلات الأدوات والمهارات والخيارات ومسارات dispatch والاختبارات ذات الصلة وملف CI. ثبت أن `keyword_intelligence` لا تصل من المهارة إلى التنفيذ بسبب غيابها عن `EXECUTABLE_TOOLS` رغم وجود `/api/dual-result` في `toolPath` و`ROUTE_LOADERS`؛ وأن `competitor_monitor` متوقفة ومستبعدة عمداً؛ وأن `translate` و`teach_space` تنفذان داخلياً. أضيف توثيق بأن `TOOL_OPTIONS.fields` وصفية ولا تفرض allowlist للحقول في runtime. بقي التحقق التشغيلي الكامل وتتبع UI-to-endpoint ومراجعة محتويات الفروع. المرحلة الأولى «جزئية»، والمرحلة الثانية لم تبدأ.
+
+- **2026-11-19:** تدقيق إضافي مباشر على فرع العمل لملفات `orchestrator.server.ts` و`tool-catalog.ts` و`tool-options.ts` و`skill-catalog.ts` و`skill-inference.ts` و`reasoning.server.ts` و`direct-tool-dispatch.server.ts` و`dual-result.ts` و`validation.yml`. لم يتغير كود التطبيق؛ اقتصر التحديث على وثائق خط الأساس وسجل الخطة.
