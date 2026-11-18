@@ -83,7 +83,9 @@ No raw IP address is included in this initial contract. Do not add it by default
 
 ## Planned integration sequence
 
-- **A0 — Audit and contract:** map endpoint/auth/workspace/report boundaries.
+- **A0 — Targeted architecture audit:** relevant visibility, social, workspace-guard
+  and report boundaries were inspected; a complete repo-wide security audit and
+  live Supabase/RLS verification remain outstanding.
 - **A1 — Pure domain core:** source classification, event validation and
   deterministic attribution models. Added in this branch.
 - **A2 — Adapter contracts:** provider normalization, explicit-consent gate for
