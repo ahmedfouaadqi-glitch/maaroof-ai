@@ -117,7 +117,8 @@ No raw IP address is included in this initial contract. Do not add it by default
 - Session totals depend on source-provided session IDs; missing IDs are counted as
   ungrouped events rather than converted into inferred sessions.
 - The report projection only attributes conversions to explicitly listed source
-  event IDs; it does not infer a journey from every event in the workspace.
+  event IDs within the conversion session. Cross-session journeys require a
+  separately consented pseudonymous identity link and are not implemented.
 - The AI platform host registry is intentionally finite and cannot identify
   traffic when browsers strip referrers or tracking parameters.
 - The current time-decay model is a transparent rule, not a learned model.
@@ -156,6 +157,6 @@ No raw IP address is included in this initial contract. Do not add it by default
 - Missing referrer remains Direct, never AI.
 - Known crawler fixtures are separated from human traffic and excluded from
   attribution.
-- Cross-workspace and post-conversion touchpoints are excluded.
+- Cross-workspace, cross-session and post-conversion touchpoints are excluded.
 - All five attribution models return deterministic, normalized credits.
 - Missing eligible touchpoints produce an explicit unattributed result.
