@@ -99,6 +99,7 @@ describe("aggregateRevenue", () => {
     conversionId: "order-1",
     workspaceId,
     occurredAt: "2026-02-02T10:00:00.000Z",
+    sessionId: "session-1",
     sourceEventIds: ["first_party:evt-1"],
     value: 100,
     currency: "USD",
@@ -167,6 +168,7 @@ describe("buildAttributionProjection", () => {
         conversionId: "order-1",
         workspaceId,
         occurredAt: "2026-02-02T10:00:00.000Z",
+        sessionId: "session-1",
         sourceEventIds: ["first_party:evt-1"],
         value: 100,
         currency: "USD",
@@ -189,6 +191,7 @@ describe("buildAttributionProjection", () => {
           conversionId: "pending-1",
           workspaceId,
           occurredAt: "2026-02-02T10:00:00.000Z",
+          sessionId: null,
           sourceEventIds: [],
           value: 20,
           currency: "USD",
@@ -229,6 +232,6 @@ describe("buildAttributionProjection", () => {
       conversions: [],
     });
     expect(projection.measurementStatus).toBe("unknown");
-    expect(projection.limitations.some((item) => item.includes("not session counts"))).toBe(true);
+    expect(projection.limitations.some((item) => item.includes("provider-supplied session IDs"))).toBe(true);
   });
 });
