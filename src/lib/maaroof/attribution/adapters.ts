@@ -263,6 +263,9 @@ export type RevenueSummary = {
 };
 
 function currencyFractionDigits(currency: string): number | null {
+  const intl = Intl as unknown as { supportedValuesOf?: (key: "currency") => string[] };
+  const supported = intl.supportedValuesOf?.("currency");
+  if (supported && !supported.includes(currency)) return null;
   try {
     return new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits;
   } catch {
@@ -294,7 +297,7 @@ export function aggregateRevenue(inputs: unknown[]): {
     const conversion = parsed.data;
     const fractionDigits = currencyFractionDigits(conversion.currency);
     if (fractionDigits == null) {
-      rejected.push({ externalId: conversion.conversionId, code: "invalid_currency", message: "Currency code is not supported by the runtime currency registry." });
+      rejected.push({ externalId: conversion.conversionId, code: "invalid_currency", message: "Currency code is not recognized by the runtime currency registry." });
       continue;
     }
     const dedupeKey = conversion.workspaceId + ":" + conversion.conversionId;
