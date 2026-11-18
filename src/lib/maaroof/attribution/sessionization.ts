@@ -11,7 +11,6 @@ export type SessionSummary = {
   humanSessions: number;
   aiReferralSessions: number;
   crawlerSessions: number;
-  sessionsWithoutId: number;
   eventsWithoutSessionId: number;
   sessionsByChannel: SessionChannelCount[];
   limitations: string[];
@@ -77,7 +76,6 @@ export function summarizeSessions(
     humanSessions,
     aiReferralSessions,
     crawlerSessions,
-    sessionsWithoutId: eventsWithoutSessionId,
     eventsWithoutSessionId,
     sessionsByChannel: [...channelCounts.entries()].map(([channel, sessions]) => ({ channel, sessions })),
     limitations,
