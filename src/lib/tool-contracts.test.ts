@@ -50,6 +50,14 @@ describe("canonical tool execution contracts", () => {
     expect(TOOL_OPTIONS.social_analysis.contextFields).toContain("official_website");
   });
 
+  it("keeps required inputs and entity identity in the same tool metadata", () => {
+    expect(TOOL_OPTIONS.brand_boost.brandField).toBe("brand_name");
+    expect(TOOL_OPTIONS.company_email.brandField).toBe("company");
+    expect(TOOL_OPTIONS.research.requiredFields).toEqual(["query"]);
+    expect(TOOL_OPTIONS.geo_rewrite.minLength?.text).toBe(25);
+    expect(TOOL_OPTIONS.keyword_intelligence.requiredAnyOf).toEqual([["brand", "site"]]);
+  });
+
   it("preserves the legacy competitor_compare alias", () => {
     expect(getToolPath("competitor_compare")).toBe("/api/compare");
     expect(getToolPath("compare")).toBe("/api/compare");
