@@ -9,6 +9,35 @@ import { TOOL_OPTIONS, type ToolOptions } from "@/lib/tool-options";
  */
 export type ToolExecutionKind = "api" | "internal" | "coordinator" | "agent_only";
 export type ToolAvailability = "active" | "paused" | "special";
+export type ToolOutputContract = {
+  /** known uses a successful SSE result event; errors are still JSON. */
+  transport: "json" | "sse";
+  successKind: "top_level_object" | "result_envelope" | "event_stream" | "paused_response";
+  /** Stable top-level fields observed in the route success response. */
+  successFields: string[];
+  errorField: "error";
+};
+
+const API_OUTPUTS: Partial<Record<ToolKey, ToolOutputContract>> = {
+  analyze: { transport: "json", successKind: "top_level_object", successFields: ["score", "authority", "local", "citation", "ai_view", "strengths", "weaknesses", "recommendations", "keywords", "platform_views", "explain", "cached"], errorField: "error" },
+  suggest: { transport: "json", successKind: "top_level_object", successFields: ["post", "sources", "council"], errorField: "error" },
+  compare: { transport: "json", successKind: "result_envelope", successFields: ["ok", "result", "sources"], errorField: "error" },
+  known: { transport: "sse", successKind: "event_stream", successFields: ["run_id", "brand", "engine_answers", "engine_status", "relations", "sources"], errorField: "error" },
+  feasibility: { transport: "json", successKind: "result_envelope", successFields: ["ok", "result", "sources"], errorField: "error" },
+  bizdev: { transport: "json", successKind: "result_envelope", successFields: ["ok", "result", "sources"], errorField: "error" },
+  research: { transport: "json", successKind: "top_level_object", successFields: ["query", "sge_summary", "answer", "key_findings", "visibility_opportunities", "sources", "channels", "sources_used", "rarity_score", "evidence_missing"], errorField: "error" },
+  visibility: { transport: "json", successKind: "result_envelope", successFields: ["ok", "operation_id", "taskId", "result", "probe", "sources"], errorField: "error" },
+  brand_boost: { transport: "json", successKind: "top_level_object", successFields: ["operation_id", "summary", "analysis_status", "analysis_limitations", "website_scan", "evidence", "plan", "engines"], errorField: "error" },
+  company_email: { transport: "json", successKind: "top_level_object", successFields: ["mode", "sources", "specialty"], errorField: "error" },
+  applied_ranking: { transport: "json", successKind: "result_envelope", successFields: ["ok", "result"], errorField: "error" },
+  geo_strategist: { transport: "json", successKind: "top_level_object", successFields: ["id", "horizon", "timeframe", "realism_note", "sources"], errorField: "error" },
+  competitor_monitor: { transport: "json", successKind: "paused_response", successFields: [], errorField: "error" },
+  social_analysis: { transport: "json", successKind: "top_level_object", successFields: [], errorField: "error" },
+  what_if: { transport: "json", successKind: "top_level_object", successFields: [], errorField: "error" },
+  brand_authority: { transport: "json", successKind: "top_level_object", successFields: ["operation_id", "slug", "public_url", "publication_scope", "published_on_customer_domain", "summary", "markdown", "json_ld", "ping"], errorField: "error" },
+  geo_rewrite: { transport: "json", successKind: "top_level_object", successFields: [], errorField: "error" },
+  keyword_intelligence: { transport: "json", successKind: "top_level_object", successFields: ["measured_keywords", "measured_pairs", "payload", "summary", "diagnostics", "evidence_state", "evidence_note", "parties", "competitor_validation", "context", "charged", "llms", "missing_fields", "clusters"], errorField: "error" },
+};
 
 export type ToolExecutionContract = {
   key: ToolKey;
@@ -21,6 +50,7 @@ export type ToolExecutionContract = {
   plannerSelectable: boolean;
   skillExecutable: boolean;
   options: ToolOptions | null;
+  output: ToolOutputContract | null;
 };
 
 const API_PATHS: Partial<Record<ToolKey, string>> = {
@@ -75,6 +105,7 @@ function buildContract(key: ToolKey): ToolExecutionContract {
     plannerSelectable,
     skillExecutable: plannerSelectable,
     options: TOOL_OPTIONS[key] || null,
+    output: API_OUTPUTS[key] || null,
   };
 }
 
