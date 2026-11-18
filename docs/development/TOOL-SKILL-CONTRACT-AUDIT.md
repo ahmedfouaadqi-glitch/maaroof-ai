@@ -294,3 +294,13 @@
 - تمت مراجعة `research.force` وتأكد أنه boolean.
 - نُقلت `normalizeToolInput` إلى الوحدة المستقلة وأصبحت tool-aware، مع أولوية النوع الخاص بالأداة على التصنيف العام. الاختبارات تغطي اختلاف `competitors` و`goals` بين الأدوات.
 - لم يُجرَ تشغيل Vitest/tsc/build على هذه التغييرات بعد؛ لا يوجد status check متاح للـ commits الجديدة عبر الأداة المستخدمة. يجب عدم اعتبار هذه المرحلة متحققة تشغيلياً.
+
+
+## 26. معالجة اختلاف الأنواع بين الأدوات في نقطة التطبيع
+
+- تم نقل `normalizeToolInput` من orchestrator إلى `tool-input-validation.ts` لتصبح وحدة مستقلة قابلة للاختبار.
+- أصبحت الدالة تستقبل `toolKey`، وتطبق `fieldTypes` الخاصة بالأداة قبل fallback إلى قواعد التطبيع القديمة.
+- عولج تعارض مثبت في الحقل `competitors`: string في feasibility مقابل string[] في compare، وكذلك `goals`: string في bizdev مقابل object في geo_strategist.
+- أضيف دعم `string|number` دون تحويل القيمة الرقمية إلى نص، مع إسقاط object غير صالح.
+- رُبطت الدالة بالمنسق قبل `coerceToolInput` وdispatch؛ لا تغيير في endpoints نفسها.
+- لا تزال هذه التغطية تعتمد على الحقول التي أمكن تثبيت أنواعها من route source. لم يُنفذ بعد تشغيل الاختبارات/TypeScript/build على HEAD الحالي؛ CI مثبت بالأرقام فقط حتى run 44422365396 الأقدم.
