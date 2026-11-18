@@ -31,7 +31,7 @@ function flatten(value: unknown): string {
   if (typeof value === "string") return value.trim();
   if (typeof value === "number" || typeof value === "boolean") return String(value);
   if (Array.isArray(value)) return value.map(flatten).filter(Boolean).join(", ");
-  try { return JSON.stringify(value); } catch { return String(value); }
+  try { return JSON.stringify(value) ?? String(value); } catch { return String(value); }
 }
 
 /**
@@ -111,7 +111,7 @@ export function coerceToolInput(
   for (const [field, type] of Object.entries(fieldTypes)) {
     if (!(field in input) || input[field] == null) continue;
     const value = input[field];
-    let normalized: unknown;
+    let normalized: unknown = value;
     let valid = true;
 
     switch (type) {
