@@ -35,7 +35,7 @@ export type AttributionProjection = {
   counts: {
     acceptedTrafficEvents: number;
     duplicateTrafficEventsExcluded: number;
-    humanSessions: number;
+    nonCrawlerSessions: number;
     aiReferralSessions: number;
     crawlerSessions: number;
     eventsWithoutSessionId: number;
@@ -176,7 +176,7 @@ export function buildAttributionProjection(
     counts: {
       acceptedTrafficEvents: traffic.length,
       duplicateTrafficEventsExcluded,
-      humanSessions: sessions.humanSessions,
+      nonCrawlerSessions: sessions.nonCrawlerSessions,
       aiReferralSessions: sessions.aiReferralSessions,
       crawlerSessions: sessions.crawlerSessions,
       eventsWithoutSessionId: sessions.eventsWithoutSessionId,
