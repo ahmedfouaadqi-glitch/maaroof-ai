@@ -11,6 +11,7 @@ import { sanitizeReport, planAsList, simulationSummary } from "./mode-report";
 import { createClient } from "@supabase/supabase-js";
 import { LOVABLE_AI_CHAT_COMPLETIONS_URL, lovableAiHeaders, extractJsonObject } from "@/lib/lovable-ai";
 import { TOOL_CATALOG, findExpertsByCapability, type Capability, type ToolDef } from "@/lib/tool-catalog";
+import { getPlannerSelectableToolKeys, getToolPath } from "@/lib/tool-contracts";
 import { loadCapabilityScores, buildCapabilityGraph, chooseImplementation, buildEvidenceGraph } from "./capability.server";
 import { recall, remember } from "./memory.server";
 import type { DetectedGeo, GeoScope } from "./geo.server";
@@ -56,28 +57,7 @@ type PlanStep = ToolCall & { depends_on?: string[] };
 const HEAVY_TOOLS = new Set(["visibility", "known", "compare", "competitor_compare", "brand_boost", "applied_ranking"]);
 
 function toolPath(toolKey: string): string | null {
-  const map: Record<string, string> = {
-    analyze: "/api/analyze",
-    suggest: "/api/suggest",
-    compare: "/api/compare",
-    competitor_compare: "/api/compare",
-    known: "/api/known",
-    feasibility: "/api/feasibility",
-    bizdev: "/api/bizdev",
-    research: "/api/research",
-    visibility: "/api/visibility",
-    brand_boost: "/api/brand-boost",
-    company_email: "/api/company-email",
-    applied_ranking: "/api/applied-ranking",
-    geo_strategist: "/api/geo-strategist",
-    competitor_monitor: "/api/competitor-monitor",
-    social_analysis: "/api/social-analysis",
-    what_if: "/api/what-if",
-    brand_authority: "/api/brand-authority",
-    geo_rewrite: "/api/geo-rewrite",
-    keyword_intelligence: "/api/dual-result",
-  };
-  return map[toolKey] || null;
+  return getToolPath(toolKey);
 }
 
 // Fields every tool endpoint expects as a plain string. The planner is an LLM
@@ -86,9 +66,11 @@ const TEXT_FIELDS = new Set([
   "brand", "brand_name", "business_name", "project_name", "app_name", "app_url",
   "keywords", "brand_keywords", "sector", "city", "country", "text", "url",
   "source_url", "description", "sourceText", "topic", "goal", "kind", "action",
+  "site", "category", "market_text", "target_market", "content_language", "request_text", "attachment_id",
+  "official_website", "website_url",
 ]);
 // Fields that must stay arrays of strings.
-const LIST_FIELDS = new Set(["competitors", "platforms", "engines", "urls", "probe_engines"]);
+const LIST_FIELDS = new Set(["competitors", "platforms", "engines", "urls", "probe_engines", "markets", "skip_keyword_pairs", "skip_keywords", "channel_types"]);
 
 function flatten(v: unknown): string {
   if (v == null) return "";
@@ -123,8 +105,14 @@ export function normalizeToolInput(input: any): Record<string, any> {
 }
 
 function toolsDescription(): string {
-  return TOOL_CATALOG.filter((t) => t.group === "tools" && t.key !== "competitor_monitor")
-    .map((t) => { const o = describeToolOptions(t.key); return `- ${t.key}: ${t.labels.en}${o ? ` (${o})` : ""}`; })
+  return getPlannerSelectableToolKeys()
+    .map((key) => {
+      const tool = TOOL_CATALOG.find((item) => item.key === key);
+      if (!tool) return "";
+      const options = describeToolOptions(key);
+      return `- ${key}: ${tool.labels.en}${options ? ` (${options})` : ""}`;
+    })
+    .filter(Boolean)
     .join("\n");
 }
 
