@@ -63,7 +63,8 @@ export function normalizeToolInput(tool: string, raw: unknown): Record<string, u
     if (declaredType === "string[]") {
       const list = toStringList(value)
         ?.filter((item) => key !== "competitors" || !isPlaceholderName(item));
-      if (list?.length) out[key] = list;
+      if (list !== null && list !== undefined) out[key] = list;
+      else out[key] = value;
       continue;
     }
     if (declaredType) {
@@ -136,7 +137,7 @@ export function coerceToolInput(
       case "string[]": {
         const list = toStringList(value);
         normalized = list;
-        valid = list !== null && list.length > 0;
+        valid = list !== null && (Array.isArray(value) || list.length > 0);
         break;
       }
       case "number": {
