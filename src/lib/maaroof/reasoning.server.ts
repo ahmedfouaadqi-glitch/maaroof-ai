@@ -1,5 +1,6 @@
 import { findDomainTerms } from "@/lib/maaroof/domain-ontology";
-import { TOOL_CATALOG, type ToolKey } from "@/lib/tool-catalog";
+import type { ToolKey } from "@/lib/tool-catalog";
+import { getPlannerSelectableToolKeys } from "@/lib/tool-contracts";
 
 export type ReasoningIntent =
   | "brand_visibility"
@@ -59,9 +60,7 @@ const TOOL_COVERAGE: Partial<Record<ReasoningIntent, ToolKey[]>> = {
   marketing_strategy: ["geo_strategist", "suggest", "bizdev"],
 };
 
-const TOOL_KEYS = new Set(
-  TOOL_CATALOG.filter((tool) => tool.group === "tools" && tool.key !== "competitor_monitor").map((tool) => tool.key),
-);
+const TOOL_KEYS = new Set<string>(getPlannerSelectableToolKeys());
 
 function matchesAny(text: string, patterns: RegExp[]): boolean {
   return patterns.some((pattern) => pattern.test(text));
