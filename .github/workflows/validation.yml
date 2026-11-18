@@ -6,6 +6,7 @@ on:
       - main
       - "fix/**"
       - "feat/**"
+      - "work/**"
 permissions:
   contents: read
 jobs:
