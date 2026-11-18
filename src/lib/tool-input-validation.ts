@@ -63,7 +63,8 @@ export function normalizeToolInput(tool: string, raw: unknown): Record<string, u
     if (declaredType === "string[]") {
       const list = toStringList(value)
         ?.filter((item) => key !== "competitors" || !isPlaceholderName(item));
-      if (list !== null && list !== undefined) out[key] = list;
+      if (list?.length) out[key] = list;
+      else if (Array.isArray(value) && value.length === 0) out[key] = [];
       else out[key] = value;
       continue;
     }
