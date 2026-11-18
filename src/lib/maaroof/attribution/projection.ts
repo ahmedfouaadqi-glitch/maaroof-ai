@@ -5,6 +5,7 @@ import {
   type Touchpoint,
   type TrafficChannel,
 } from "./domain";
+import { summarizeSessions } from "./sessionization";
 import {
   ConversionInputSchema,
   type ConversionInput,
@@ -33,6 +34,10 @@ export type AttributionProjection = {
   measurementStatus: "measured" | "partial" | "unknown";
   counts: {
     acceptedTrafficEvents: number;
+    humanSessions: number;
+    aiReferralSessions: number;
+    crawlerSessions: number;
+    eventsWithoutSessionId: number;
     aiReferralEvents: number;
     crawlerMarkerEvents: number;
     confirmedConversions: number;
@@ -132,6 +137,7 @@ export function buildAttributionProjection(
     }
   }
 
+  const sessions = summarizeSessions(traffic, input.workspaceId);
   const aiReferralEvents = traffic.filter((item) => item.classification.channel === "ai_referral").length;
   const crawlerMarkerEvents = traffic.filter((item) => item.classification.channel === "crawler").length;
   const measurementStatus = traffic.length === 0
@@ -141,7 +147,7 @@ export function buildAttributionProjection(
       : "measured";
 
   if (traffic.length === 0) limitations.push("No eligible traffic events were supplied for this workspace.");
-  limitations.push("Traffic event counts are not session counts; sessionization is not performed by this projection.");
+  limitations.push(...sessions.limitations);
   limitations.push("Attribution is descriptive credit allocation, not causal proof of incremental lift.");
   limitations.push("AI referral detection is limited to explicit UTM or recognized referrer evidence; stripped referrers remain unidentifiable.");
   limitations.push("Revenue is reported in source currency; no foreign-exchange conversion is performed.");
@@ -153,6 +159,10 @@ export function buildAttributionProjection(
     measurementStatus,
     counts: {
       acceptedTrafficEvents: traffic.length,
+      humanSessions: sessions.humanSessions,
+      aiReferralSessions: sessions.aiReferralSessions,
+      crawlerSessions: sessions.crawlerSessions,
+      eventsWithoutSessionId: sessions.eventsWithoutSessionId,
       aiReferralEvents,
       crawlerMarkerEvents,
       confirmedConversions,
