@@ -119,7 +119,10 @@ export function coerceToolInput(
 
     switch (type) {
       case "string": {
-        normalized = toText(value);
+        const text = toText(value);
+        normalized = field === "competitors"
+          ? text.split(/[\\n,؛;|]+/).map((item) => item.trim()).filter((item) => !isPlaceholderName(item)).join(", ")
+          : text;
         valid = Boolean(normalized);
         break;
       }
@@ -136,7 +139,7 @@ export function coerceToolInput(
         break;
       }
       case "string[]": {
-        const list = toStringList(value);
+        const list = toStringList(value)?.filter((item) => field !== "competitors" || !isPlaceholderName(item)) ?? null;
         normalized = list;
         valid = list !== null && (list.length > 0 || (Array.isArray(value) && value.length === 0));
         break;
