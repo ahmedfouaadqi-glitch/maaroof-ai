@@ -59,15 +59,15 @@ function isValidDate(value: string): boolean {
 export async function readGa4AttributionReport(
   input: Ga4ReadReportInput,
 ): Promise<Ga4ReadReportResult> {
-  if (!/^\d+$/.test(input.propertyId)) throw new Error("invalid_ga4_property_id");
-  if (!input.accessToken.trim()) throw new Error("ga4_access_token_required");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(input.endDate)) {
+  if (!isValidDate(input.startDate) || !isValidDate(input.endDate)) {
     throw new Error("ga4_dates_must_be_yyyy_mm_dd");
   }
   if (input.startDate > input.endDate) throw new Error("ga4_start_date_after_end_date");
 
-  const pageSize = Math.min(100000, Math.max(1, Math.floor(input.pageSize ?? 10000)));
-  const maxPages = Math.min(100, Math.max(1, Math.floor(input.maxPages ?? 10)));
+  const requestedPageSize = Number.isFinite(input.pageSize) ? Math.floor(input.pageSize as number) : 10000;
+  const requestedMaxPages = Number.isFinite(input.maxPages) ? Math.floor(input.maxPages as number) : 10;
+  const pageSize = Math.min(100000, Math.max(1, requestedPageSize));
+  const maxPages = Math.min(100, Math.max(1, requestedMaxPages));
   const endpoint = `https://analyticsdata.googleapis.com/v1beta/properties/${input.propertyId}:runReport`;
   const rows: NonNullable<ReturnType<typeof mapGa4ReportRow>>[] = [];
   const warnings: string[] = [];
