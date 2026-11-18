@@ -180,7 +180,7 @@ describe("buildAttributionProjection", () => {
         workspaceId,
         occurredAt: "2026-02-02T10:00:00.000Z",
         sessionId: "session-1",
-        sourceEventIds: ["first_party:evt-1"],
+        sourceEventIds: ["first_party:evt-1", "first_party:unrelated-session-event"],
         value: 100,
         currency: "USD",
         status: "confirmed",
