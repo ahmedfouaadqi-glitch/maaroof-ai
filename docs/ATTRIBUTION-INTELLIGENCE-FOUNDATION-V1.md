@@ -88,15 +88,17 @@ No raw IP address is included in this initial contract. Do not add it by default
   deterministic attribution models. Added in this branch.
 - **A2 — Adapter contracts:** provider normalization, explicit-consent gate for
   event-level records, in-batch deduplication, and GA4 aggregate-row mapping.
-  A read-only GA4 Data API reader with pagination is added; OAuth authorization,
-  token refresh, property discovery and application wiring are not implemented.
+  A read-only GA4 Data API reader with pagination and a session-source aggregate
+  projection/export are added; OAuth authorization, token refresh, property
+  discovery and application wiring are not implemented.
 - **A3 — Conversion and revenue normalization:** confirmed/pending/reversed
   conversion normalization, duplicate guards, currency-separated aggregation,
   explicit source-event membership, and provider-ID namespacing. Pure functions are added.
 - **Sessionization:** supplied session IDs are grouped without inventing sessions;
   crawler-marked sessions are excluded from human session counts.
 - **A4 — MAAROOF integration:** a workspace-scoped report projection is added,
-  but it is not yet wired into existing reports or UI.
+  with Arabic/English/Kurdish export-section adapters; it is not yet wired into
+  existing reports or UI.
 - **A5 — Verification:** fixtures are added; actual test execution, tenant
   integration tests, privacy tests, lint and build remain outstanding.
 
