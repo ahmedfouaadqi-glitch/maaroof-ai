@@ -64,6 +64,10 @@ type Bucket = {
 export function buildAttributionProjection(
   input: AttributionProjectionInput,
 ): AttributionProjection {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.workspaceId)) {
+    throw new Error("invalid_attribution_workspace_id");
+  }
+
   const scopedTraffic = input.traffic.filter(
     (item) => item.event.workspaceId === input.workspaceId,
   );
