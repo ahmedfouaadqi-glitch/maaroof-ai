@@ -212,7 +212,7 @@
 - فشل التشغيل في خطوة Unit Tests قبل الوصول إلى TypeScript validation أو production build.
 - سجل الاختبار: **1 suite failed، 143 suites passed؛ 730 tests passed، 3 skipped**.
 - سبب الفشل المباشر: src/lib/maaroof/attribution/domain.test.ts يستورد ./domain، لكن الملف src/lib/maaroof/attribution/domain.ts غير موجود على main.
-- تمت مطابقة الملف على فرع feat/attribution-intelligence-foundation-v1، حيث يوجد domain.ts، بينما لا يوجد على main. هذا يثبت عدم اتساق ملفات الاختبار والتنفيذ في main، ولا يثبت أن نسخ الملف وحده هو الإصلاح الصحيح؛ يلزم مراجعة diff الفرع وتوافقه قبل أي نقل.
+- تمت مطابقة الملف على فرع feat/attribution-intelligence-foundation-v1، حيث يوجد domain.ts، بينما لا يوجد على main. هذا الفرع مرتبط بـ PR #73 المفتوح بحالة Draft وغير مدمج؛ نص PR يصرّح بأن الاختبارات لم تُشغّل وأن التغييرات لا تتضمن تعديلات على ملفات قائمة. هذا يثبت عدم اتساق ملفات الاختبار والتنفيذ في main، ولا يثبت أن نسخ الملف وحده هو الإصلاح الصحيح؛ يلزم مراجعة diff الفرع وتوافقه قبل أي نقل.
 - يوجد تشغيل سابق ناجح على main (run 44125549196) لكنه على commit أقدم، فلا يلغي فشل أحدث commit.
 - يوجد تشغيل ناجح على فرع آخر feat/non-destructive-owner-workspaces-reports-2026-11-17 (run 44057164020) شمل tests وTypeScript وbuild، لكنه لا يمثل حالة main الحالية. فحصه لا يغني عن إصلاح فشل main.
 - lint في التشغيل المشار إليه مصنف في handoff الفرع الآخر كتقرير تشخيصي، وليس بوابة نجاح؛ لا يُعامل كاجتياز lint.
