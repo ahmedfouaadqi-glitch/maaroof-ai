@@ -49,6 +49,16 @@ describe("typed tool input normalization", () => {
     });
   });
 
+  it("preserves an explicitly empty list and reports non-list values", () => {
+    const empty = coerceToolInput("brand_boost", normalizeToolInput("brand_boost", { platforms: [] }));
+    expect(empty).toEqual({ input: { platforms: [] }, issues: [] });
+    const invalid = coerceToolInput("brand_boost", normalizeToolInput("brand_boost", { platforms: 42 }));
+    expect(invalid).toEqual({
+      input: {},
+      issues: [{ field: "platforms", expected: "string[]" }],
+    });
+  });
+
   it("preserves false and zero as valid values", () => {
     expect(coerceToolInput("keyword_intelligence", {
       live_search: false,
