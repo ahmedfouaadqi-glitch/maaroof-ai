@@ -10,7 +10,7 @@ describe("typed tool input normalization", () => {
     });
     expect(feasibility).toEqual({ competitors: "Alpha, Beta", budget_iqd: 125000 });
 
-    const compare = normalizeToolInput("compare", { competitors: "Alpha\\nBeta" });
+    const compare = normalizeToolInput("compare", { competitors: "Alpha\nBeta" });
     expect(compare).toEqual({ competitors: ["Alpha", "Beta"] });
 
     const bizdev = normalizeToolInput("bizdev", { goals: ["retain customers", "grow revenue"] });
