@@ -322,3 +322,38 @@
 
 - الفروع #1 و#3 و#26 و#42 و#53 و#59 و#73 جميعها متباعدة عن main في المقارنات الحالية؛ لا يجوز استنتاج قابلية الدمج من أعداد ahead أو نتائج CI تاريخية.
 - المراجعة الحالية انتقائية ومقصودة: منطق pure وواجهات محددة فقط، مع استبعاد Supabase/DB وملفات الأسرار ومزودي النماذج. لم يُنفذ merge أو cherry-pick أو نشر.
+
+## مصفوفة ربط واجهات الأدوات المباشرة بمسارات التنفيذ
+
+تم تتبع مكونات TOOL_UI في SkillToolsPanel.tsx وDirectToolsPanel.tsx إلى ملفات الواجهة الفعلية، ثم استخراج مسارات API المستخدمة من تلك المكونات. المصفوفة التالية تصف الربط الساكن في main؛ وجود استدعاء في الواجهة لا يثبت نجاح endpoint وقت التشغيل.
+
+| Tool/UI key | مكوّن الواجهة | مسارات التنفيذ المرصودة | الملاحظة |
+|---|---|---|---|
+| analyze | Sandbox | /api/analyze؛ /api/geo-rewrite | أداة التحليل تتضمن إجراء إعادة كتابة ثانوياً داخل المكوّن نفسه. |
+| suggest | PostSuggester | /api/suggest | واجهة توليد المنشورات. |
+| compare | CompetitorCompare | /api/compare | alias competitor_compare في toolPath يوجّه إلى هذا المسار، وليس ToolKey مستقلاً. |
+| known | KnownDiscovery | /api/known؛ /api/competitor-monitor | اكتشاف المنافسين؛ إجراء المراقبة الثانوي يطلب policy/create من مسار المراقبة. |
+| feasibility | FeasibilityStudy | /api/feasibility | تطابق مباشر. |
+| bizdev | BizDev | /api/bizdev | تطابق مباشر. |
+| brand_boost | BrandBoostAgent | /api/brand-boost؛ /api/brand-authority؛ /api/brand-boost-report-settings | المكوّن يجمع عمليات أساسية وثانوية وإعدادات تقارير؛ لا تختزل جميعها في endpoint واحد. |
+| applied_ranking | AppliedRanking | /api/applied-ranking | تطابق مباشر. |
+| visibility | VisibilityIntelligence → AIVisibility | /api/visibility؛ /api/site-discovery؛ /api/visibility-baseline | لوحة الرؤية تجمع probe واكتشاف الموقع وتعيين baseline. |
+| social_analysis | VisibilityIntelligence → SocialAnalysis | /api/social-analysis؛ /api/site-discovery | نفس الحاوية المرئية مع view اجتماعي متخصص. |
+| competitor_monitor | CompetitorMonitor | /api/competitor-monitor | المكوّن موجود في TOOL_UI لكن DirectToolsPanel يعرضه متوقفاً ويمنع الإطلاق؛ endpoint يظهر أيضاً كإجراء مراقبة ثانوي في KnownDiscovery. |
+| geo_strategist | GeoStrategist | /api/geo-strategist | تطابق مباشر. |
+| what_if | WhatIfSimulator | /api/what-if | تطابق مباشر. |
+| research | SmartResearch | /api/research | تطابق مباشر. |
+| company_email | CompanyOutreach | /api/company-email | تطابق مباشر. |
+| keyword_intelligence | KeywordIntelligence | /api/dual-result؛ /api/keyword-upload | endpoint التحليل هو dual-result؛ keyword-upload مسار رفع الملف المساند. |
+| security_scan | SecurityScanCard | /api/security-scan | مكوّن UI إضافي لا يقابله ToolKey أو TOOL_OPTIONS في المصفوفة الحالية. |
+| report | ReportBuilder | لا يوجد API route مباشر مرصود في المكوّن | يستخدم captured results وtool-history server functions وقراءات تقارير؛ مسار workspace مستقل وليس ToolKey عادي. |
+
+### نتائج ربط الواجهة بالتنفيذ
+
+1. 17 مكوّناً/مدخلاً فعلياً تتبع إلى أدوات أو مسارات UI، مع وجود Security Scan وReport كمسارين إضافيين خارج ToolKey/TOOL_OPTIONS.
+2. بعض الأدوات متعددة المسارات: analyze وbrand_boost وknown وvisibility وsocial_analysis؛ يجب أن تكون العقود على مستوى العملية/الإجراء، لا افتراض endpoint واحد لكل مكوّن.
+3. social_analysis وvisibility يعيدان استخدام VisibilityIntelligence لكن يختاران مكوّنين داخليين مختلفين (SocialAnalysis وAIVisibility).
+4. keyword_intelligence لديها واجهة مباشرة ومسار تحليل ورفع ملف، لكن فجوة EXECUTABLE_TOOLS السابقة تمنع ضمان إدراجها في خطط المهارات.
+5. competitor_monitor ظاهر في سجل UI لكنه disabled في DirectToolsPanel؛ وجود endpoint لا يساوي توفر التنفيذ للمستخدم أو للمنسّق.
+6. ReportBuilder ليس endpoint لأداة عادية؛ لا ينبغي إضافته قسراً إلى ToolKey دون تعريف عقد منفصل.
+7. لم تُجرَ طلبات HTTP حية إلى هذه المسارات، ولم تُراجع موصلات النماذج أو قاعدة البيانات؛ هذه مصفوفة static wiring فقط.
