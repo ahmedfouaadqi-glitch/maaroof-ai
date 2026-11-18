@@ -162,7 +162,8 @@ export function classifyTrafficSource(input: {
   if (utmSource) {
     if (utmMedium === "organic") {
       return { channel: "organic_search", source: utmSource, medium: "organic", confidence: "medium", evidence: "utm", reason: "Client-supplied organic search campaign tagging." };
-    }\n    if (/^(cpc|ppc|paidsearch|paid-search)$/.test(utmMedium)) {
+    }
+    if (/^(cpc|ppc|paidsearch|paid-search)$/.test(utmMedium)) {
       return { channel: "paid_search", source: utmSource, medium: utmMedium, confidence: "medium", evidence: "utm", reason: "Client-supplied paid-search campaign tagging." };
     }
     if (/^(email|e-mail)$/.test(utmMedium)) {
