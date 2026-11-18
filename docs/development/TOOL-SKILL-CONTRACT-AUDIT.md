@@ -285,3 +285,12 @@
 - أضيفت اختبارات تبين اختلاف competitors وgoals حسب الأداة، وتحافظ على القيم العددية، وترفض object في الحقول scalar.
 - بقيت الحقول غير المصنفة pass-through؛ لا تزال بعض endpoints لا تملك Body type صريحاً، وبعض القيم تقبل صيغاً متعددة. لا يُدعى اكتمال schema شاملة حتى تغطية كل حقل من المصدر.
 
+
+
+## 25. تغطية إضافية لأنواع حقول endpoints
+
+وسعت `fieldTypes` لتشمل الحقول النصية وحقول UI والسياق التي تم التحقق من استخدامها، مع دعم `string|number` للحقول التي تقبل النوعين صراحةً في Body (مثل budget/revenue/team_size/timeline). كما أُضيفت أنواع imageBase64/imageMime وwebsite_url/official_website وgeo_scope بحسب مواضعها في طبقات UI/context.
+- تمت مراجعة `dual-result.geo_scope` وتأكد أنه كائن؛ لذلك صُنّف object.
+- تمت مراجعة `research.force` وتأكد أنه boolean.
+- نُقلت `normalizeToolInput` إلى الوحدة المستقلة وأصبحت tool-aware، مع أولوية النوع الخاص بالأداة على التصنيف العام. الاختبارات تغطي اختلاف `competitors` و`goals` بين الأدوات.
+- لم يُجرَ تشغيل Vitest/tsc/build على هذه التغييرات بعد؛ لا يوجد status check متاح للـ commits الجديدة عبر الأداة المستخدمة. يجب عدم اعتبار هذه المرحلة متحققة تشغيلياً.
