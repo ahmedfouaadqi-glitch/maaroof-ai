@@ -6,6 +6,7 @@ import {
 
 export const GA4_READONLY_SCOPE = "https://www.googleapis.com/auth/analytics.readonly";
 
+// Keep all dimensions session-scoped so session metrics are not duplicated by event-level dimensions.
 const GA4_DIMENSIONS = [
   "sessionSource",
   "sessionMedium",
