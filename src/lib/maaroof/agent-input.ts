@@ -225,7 +225,7 @@ export function fillFromTask(tool: string, input: Record<string, any>, results: 
 const Q: Record<string, Record<"ar" | "en" | "ku", string>> = {
   brand: { ar: "لم نجد اسم العلامة لهذه الخطوة، ما هو؟", en: "We couldn't find the brand name for this step — what is it?", ku: "ناوی براند بۆ ئەم هەنگاوە نەدۆزرایەوە، چییە؟" },
   description: { ar: "ما موضوع المحتوى الذي تريد منشورات عنه؟", en: "What should the posts be about?", ku: "پۆستەکان دەربارەی چی بن؟" },
-  text: { ar: "لم نجد نصاً كافياً لإعادة الصياغة. أرسل النص الأصلي، أو أضف وصفاً موثقاً للكيان (25 حرفاً على الأقل).", en: "No suitable source text was found. Provide the original text or a verified entity description (at least 25 characters).", ku: "دەقی گونجاو نەدۆزرایەوە؛ دەقی سەرەکی یان وەسفێکی پشتڕاستکراوی قەوارە بنێرە (لانیکەم ٢٥ پیت)." },
+  text: { ar: "لم نجد نصاً كافياً لهذه الخطوة. أرسل النص الأصلي أو محتوى الصفحة المطلوب تحليله أو إعادة صياغته.", en: "No suitable source text was found for this step. Provide the original text or page content to analyze or rewrite.", ku: "دەقی گونجاو بۆ ئەم هەنگاوە نەدۆزرایەوە؛ دەقی سەرەکی یان ناوەڕۆکی پەڕەکە بنێرە بۆ شیکردنەوە یان دووبارەنووسینەوە." },
   query: { ar: "ما الموضوع الذي تريد البحث عنه بالضبط؟", en: "What exactly should we research?", ku: "چی بە وردی لێکۆڵینەوەی بۆ بکەین؟" },
 };
 
