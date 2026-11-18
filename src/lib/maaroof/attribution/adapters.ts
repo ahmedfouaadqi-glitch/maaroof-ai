@@ -177,9 +177,8 @@ export function normalizeTrafficBatch(inputs: unknown[]): AdapterBatchResult {
 }
 
 /**
- * Minimal GA4 Data API row contract. The actual Data API request, OAuth scope,
- * property authorization and pagination belong in a separately reviewed
- * read-only connector. GA4 aggregate rows are not treated as individual events.
+ * Minimal GA4 Data API aggregate-row contract. The read-only request adapter
+ * lives in ga4-read-adapter.ts. Aggregate rows are never treated as individual events.
  */
 export type Ga4ReportRow = {
   dimensionValues?: Array<{ value?: string | null }>;
