@@ -137,7 +137,7 @@ export function coerceToolInput(
       case "string[]": {
         const list = toStringList(value);
         normalized = list;
-        valid = list !== null && (Array.isArray(value) || list.length > 0);
+        valid = list !== null && (list.length > 0 || (Array.isArray(value) && value.length === 0));
         break;
       }
       case "number": {
