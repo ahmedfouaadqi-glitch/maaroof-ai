@@ -101,6 +101,25 @@ describe("readGa4AttributionReport", () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
+  it("rejects impossible calendar dates and empty access tokens", async () => {
+    const fetchImpl = vi.fn();
+    await expect(readGa4AttributionReport({
+      propertyId: "123456789",
+      accessToken: "token",
+      startDate: "2026-02-30",
+      endDate: "2026-03-01",
+      fetchImpl,
+    })).rejects.toThrow("ga4_dates_must_be_yyyy_mm_dd");
+    await expect(readGa4AttributionReport({
+      propertyId: "123456789",
+      accessToken: " ",
+      startDate: "2026-02-01",
+      endDate: "2026-03-01",
+      fetchImpl,
+    })).rejects.toThrow("ga4_access_token_required");
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
   it("surfaces provider errors without silently returning an empty report", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(new Response("permission denied", { status: 403 }));
     await expect(readGa4AttributionReport({
