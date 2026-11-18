@@ -38,6 +38,13 @@ describe("canonical tool execution contracts", () => {
     expect(TOOL_CONTRACTS.competitor_monitor.output?.successKind).toBe("paused_response");
   });
 
+  it("documents the input surface for internal tools without adding fake API routes", () => {
+    expect(TOOL_CONTRACTS.translate.options?.fields).toEqual(["target_lang"]);
+    expect(TOOL_CONTRACTS.translate.path).toBeNull();
+    expect(TOOL_CONTRACTS.teach_space.options?.fields).toEqual([]);
+    expect(TOOL_CONTRACTS.teach_space.path).toBeNull();
+  });
+
   it("documents outputs for internal skill-executable tools", () => {
     expect(TOOL_CONTRACTS.translate.output).toMatchObject({
       transport: "internal",
