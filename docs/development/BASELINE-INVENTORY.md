@@ -248,7 +248,7 @@
 
 - مقارنة main مع feat/attribution-intelligence-foundation-v1 أظهرت أن الفرع متباعد: 128 commit ahead و5 behind، وأن ملفات attribution الـ18 مضافة على هذا الفرع.
 - ملف src/lib/maaroof/attribution/domain.test.ts موجود على main ويستورد ./domain، لكن src/lib/maaroof/attribution/domain.ts غير موجود على main.
-- تتبع commit محدد أكد أن commit 45aa0e22f26839960e0a67c42f880def40ff5e2d أضاف ملف الاختبار وحده، من دون ملف domain. ثم أضاف commit منفصل 051fba15c741a5957343d704dbe10e5732f69b9f ملف domain إلى فرع attribution. هذا يثبت تسلسل إدخال الاختبار دون مصدره على main؛ لا يثبت أن نقل الملف وحده هو الحل الصحيح أو أن بقية PR آمنة للدمج.
+- تسلسل Git الكامل أدق من ذلك: commit 45aa0e22 أضاف domain.test.ts؛ commit 051fba15 أضاف domain.ts؛ ثم commit 70095aa9 (الأبناء على main) حذف domain.ts صراحةً عبر revert بعنوان 'revert accidental default-branch file addition'، بينما بقي domain.test.ts. بعد ذلك أضاف 578edf64 اختبار adapters منفصلاً، ثم حذف commit 3d94c7d اختبار adapters فقط. لذلك سبب فشل CI الحالي هو أثر revert حذف المصدر مع إبقاء اختبار domain.test.ts. هذا ليس مجرد إدخال اختبار بلا مصدر؛ هو revert انتقائي للملف المصدر. لا يثبت أن استعادة الملف وحدها هي الإصلاح الصحيح أو أن بقية PR آمنة للدمج.
 - PR #73 ما زال Draft، ووصفه يصرح بأن الاختبارات وlint وTypeScript والبناء لم تُشغّل. لذلك لا يعتمد كإصلاح متحقق.
 - المراجعة الساكنة لملف domain تبين قواعد تصنيف UTM/referrer وUA، وخمسة نماذج attribution، مع منع cross-workspace واستبعاد crawler واللمسات اللاحقة للتحويل. المخرجات وصفية وليست سببية.
 - حد مهم: attributeConversion() يسمح افتراضياً بجمع اللمسات من أكثر من session داخل workspace نفسه إذا لم يمرر المستدعي eligibleSessionId أو eligibleEventIds. يجب أن تضمن طبقة projection/الاستدعاء قيد الرحلة المقصود؛ لا يكفي الاعتماد على الدالة وحدها.
@@ -357,3 +357,11 @@
 5. competitor_monitor ظاهر في سجل UI لكنه disabled في DirectToolsPanel؛ وجود endpoint لا يساوي توفر التنفيذ للمستخدم أو للمنسّق.
 6. ReportBuilder ليس endpoint لأداة عادية؛ لا ينبغي إضافته قسراً إلى ToolKey دون تعريف عقد منفصل.
 7. لم تُجرَ طلبات HTTP حية إلى هذه المسارات، ولم تُراجع موصلات النماذج أو قاعدة البيانات؛ هذه مصفوفة static wiring فقط.
+
+### تدقيق سببي دقيق لفشل CI على main — تحديث 2026-11-19
+
+- تمت قراءة سجل GitHub Actions رقم 44278208035 وسجل job 134711680877 مباشرةً. البيئة ثبتت Bun 1.4.4، وثُبتت 725 حزمة بنجاح، ثم شغّل Vitest.
+- النتائج الفعلية: 144 test files؛ 143 passed و1 failed؛ 733 tests؛ 730 passed و3 skipped. الفشل الوحيد: src/lib/maaroof/attribution/domain.test.ts بسبب Cannot find module './domain'. خطوة Build كانت skipped بسبب توقف job عند فشل الاختبارات.
+- تتبع commit ancestry: 45aa0e22 أضاف domain.test.ts؛ 051fba15 أضاف domain.ts؛ 70095aa9 حذف domain.ts صراحةً عبر revert بعنوان revert accidental default-branch file addition؛ 578edf64 أضاف adapters.test.ts؛ و3d94c7d حذف adapters.test.ts فقط. إذن سبب فشل CI هو بقاء domain.test.ts بعد revert المصدر في 70095aa9، وليس مجرد test commit مستقل غير مصحوب بمصدر.
+- commit 3d94c7d الذي اختبره CI يحمل message 'revert accidental default-branch test file write' لكنه حذف adapters.test.ts، ولا يعالج domain.test.ts أو domain.ts. لذلك اسم commit لا يصف معالجة الخطأ الذي فشل CI فيه.
+- لم يُعد تشغيل CI ولم يُعدّل أي كود. قرار استعادة domain.ts يحتاج مراجعة نية revert 70095aa9 وسياق PR/التغييرات المحيطة قبل أي تعديل. كما لا توجد آلية workflow_dispatch في workflow الحالي؛ push filters لا تشمل work/**، ولا يجوز تعديل workflow أو إنشاء PR فقط لتشغيل CI دون موافقة.
