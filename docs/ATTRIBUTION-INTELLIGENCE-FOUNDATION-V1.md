@@ -15,8 +15,8 @@ testable before introducing any event collector or data connector.
 ## Four separate measurement domains
 
 1. **AI visibility** — brand mentions, answers, citations and measured probe output.
-2. **Crawler activity** — verified or observed automated requests from bots.
-3. **Human AI referrals** — sessions with explicit AI referrer or campaign evidence.
+2. **Crawler activity** — requests provisionally identified as automated from available evidence.
+3. **AI referral traffic** — sessions with explicit AI referrer or campaign evidence; non-crawler does not prove human identity.
 4. **Business outcomes** — leads, conversions and revenue linked to a consented,
    workspace-scoped journey.
 
