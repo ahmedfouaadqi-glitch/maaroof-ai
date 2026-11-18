@@ -9,6 +9,7 @@ const projection: AttributionProjection = {
   measurementStatus: "partial",
   counts: {
     acceptedTrafficEvents: 12,
+    duplicateTrafficEventsExcluded: 0,
     humanSessions: 8,
     aiReferralSessions: 2,
     crawlerSessions: 1,
