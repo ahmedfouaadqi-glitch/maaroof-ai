@@ -10,29 +10,37 @@ export type ToolOptions = {
   uiFields?: string[];
   /** Values injected from workspace, entity profile, request locale or runtime context. */
   contextFields?: string[];
+  /** The endpoint's primary entity-name input, when applicable. */
+  brandField?: string;
+  /** Required fields checked before the orchestrator dispatches a step. */
+  requiredFields?: string[];
+  /** At least one valid field in each group must be present. */
+  requiredAnyOf?: string[][];
+  /** Minimum string lengths for required fields. */
+  minLength?: Record<string, number>;
   /** Closed-value fields: any other value is dropped (endpoint default applies). */
   enums?: Record<string, string[]>;
 };
 
 export const TOOL_OPTIONS: Record<string, ToolOptions> = {
   analyze: { fields: ["text"], contextFields: ["lang", "scope", "workspace_id"] },
-  suggest: { fields: ["description", "sourceText", "brand", "audience", "contentType", "count", "length", "platforms", "goal"], uiFields: ["imageBase64", "imageMime"], contextFields: ["lang", "scope", "workspace_id"] },
-  compare: { fields: ["brand", "competitors", "keywords", "websites"], contextFields: ["lang", "scope", "workspace_id"] },
-  known: { fields: ["brand", "sector", "keywords", "website", "depth"], uiFields: ["force"], contextFields: ["url", "lang", "scope", "workspace_id"], enums: { depth: ["quick", "deep"] } },
-  feasibility: { fields: ["project_name", "sector", "city", "problem", "solution", "target_audience", "revenue_model", "budget_iqd", "team_size", "timeline_months", "competitors", "notes"], contextFields: ["lang", "scope", "workspace_id"] },
-  bizdev: { fields: ["business_name", "sector", "stage", "city", "goals", "challenges", "channels", "budget_iqd", "current_revenue_iqd", "monthly_customers", "team_size", "notes"], contextFields: ["lang", "scope", "workspace_id"] },
-  research: { fields: ["query", "mode"], uiFields: ["include_channels", "channel_types", "force"], contextFields: ["lang", "scope", "workspace_id"], enums: { mode: ["web", "company"] } },
-  visibility: { tabs: ["visibility", "share_of_voice", "history", "live_probe"], fields: ["brand", "keywords", "probe_engines", "notify"], uiFields: ["background"], contextFields: ["official_website", "lang", "scope", "workspace_id"] },
-  brand_boost: { tabs: ["visibility", "research", "outreach", "run", "authority", "propagation", "logs"], fields: ["brand_name", "brand_keywords", "platforms"], contextFields: ["website_url", "lang", "scope", "workspace_id"] },
-  company_email: { fields: ["company", "sector", "notes", "goal", "mode"], contextFields: ["lang", "scope", "workspace_id"], enums: { mode: ["search", "email", "brand"] } },
-  applied_ranking: { fields: ["brand_name", "brand_keywords", "app_name", "app_url", "website", "sector", "notes"], contextFields: ["lang", "scope", "workspace_id", "workspaceId"] },
-  geo_strategist: { fields: ["brand", "keywords", "goals", "timeframe"], contextFields: ["lang", "scope", "workspace_id"] },
+  suggest: { fields: ["description", "sourceText", "brand", "audience", "contentType", "count", "length", "platforms", "goal"], uiFields: ["imageBase64", "imageMime"], contextFields: ["lang", "scope", "workspace_id"], requiredFields: ["description"] },
+  compare: { fields: ["brand", "competitors", "keywords", "websites"], contextFields: ["lang", "scope", "workspace_id"], brandField: "brand", requiredFields: ["brand"] },
+  known: { fields: ["brand", "sector", "keywords", "website", "depth"], uiFields: ["force"], contextFields: ["url", "lang", "scope", "workspace_id"], brandField: "brand", requiredFields: ["brand"], enums: { depth: ["quick", "deep"] } },
+  feasibility: { fields: ["project_name", "sector", "city", "problem", "solution", "target_audience", "revenue_model", "budget_iqd", "team_size", "timeline_months", "competitors", "notes"], contextFields: ["lang", "scope", "workspace_id"], brandField: "project_name", requiredFields: ["project_name"] },
+  bizdev: { fields: ["business_name", "sector", "stage", "city", "goals", "challenges", "channels", "budget_iqd", "current_revenue_iqd", "monthly_customers", "team_size", "notes"], contextFields: ["lang", "scope", "workspace_id"], brandField: "business_name", requiredFields: ["business_name"] },
+  research: { fields: ["query", "mode"], uiFields: ["include_channels", "channel_types", "force"], contextFields: ["lang", "scope", "workspace_id"], requiredFields: ["query"], enums: { mode: ["web", "company"] } },
+  visibility: { tabs: ["visibility", "share_of_voice", "history", "live_probe"], fields: ["brand", "keywords", "probe_engines", "notify"], uiFields: ["background"], contextFields: ["official_website", "lang", "scope", "workspace_id"], brandField: "brand", requiredFields: ["brand"] },
+  brand_boost: { tabs: ["visibility", "research", "outreach", "run", "authority", "propagation", "logs"], fields: ["brand_name", "brand_keywords", "platforms"], contextFields: ["website_url", "lang", "scope", "workspace_id"], brandField: "brand_name", requiredFields: ["brand_name"] },
+  company_email: { fields: ["company", "sector", "notes", "goal", "mode"], contextFields: ["lang", "scope", "workspace_id"], brandField: "company", requiredFields: ["company"], enums: { mode: ["search", "email", "brand"] } },
+  applied_ranking: { fields: ["brand_name", "brand_keywords", "app_name", "app_url", "website", "sector", "notes"], contextFields: ["lang", "scope", "workspace_id", "workspaceId"], brandField: "brand_name", requiredFields: ["brand_name"] },
+  geo_strategist: { fields: ["brand", "keywords", "goals", "timeframe"], contextFields: ["lang", "scope", "workspace_id"], brandField: "brand", requiredFields: ["brand"] },
   competitor_monitor: { fields: ["action", "id", "brand", "competitors", "frequency_hours"], contextFields: ["lang", "workspace_id"], enums: { action: ["create", "list", "recheck", "delete", "policy"] } },
-  social_analysis: { fields: ["brand", "keywords"], contextFields: ["official_website", "lang", "scope", "workspace_id"] },
-  what_if: { fields: ["brand", "changes", "kind", "axes"], contextFields: ["lang", "workspace_id"] },
-  brand_authority: { fields: ["brand_name", "brand_keywords", "source_url", "ping"], contextFields: ["lang", "workspace_id"] },
-  geo_rewrite: { fields: ["text"], contextFields: ["lang", "scope", "workspace_id"] },
-  keyword_intelligence: { fields: ["brand", "site", "category", "competitors", "market_text"], uiFields: ["attachment_id", "content_language", "live_search", "live_search_limit", "estimate_only", "skip_keyword_pairs", "skip_keywords", "cluster_limit", "sample_limit", "markets", "geo_scope", "request_text", "target_market", "text"], contextFields: ["lang", "workspace_id"], enums: { lang: ["ar", "en", "ku"] } },
+  social_analysis: { fields: ["brand", "keywords"], contextFields: ["official_website", "lang", "scope", "workspace_id"], brandField: "brand", requiredFields: ["brand"] },
+  what_if: { fields: ["brand", "changes", "kind", "axes"], contextFields: ["lang", "workspace_id"], brandField: "brand", requiredFields: ["brand"] },
+  brand_authority: { fields: ["brand_name", "brand_keywords", "source_url", "ping"], contextFields: ["lang", "workspace_id"], brandField: "brand_name", requiredFields: ["brand_name"] },
+  geo_rewrite: { fields: ["text"], contextFields: ["lang", "scope", "workspace_id"], requiredFields: ["text"], minLength: { text: 25 } },
+  keyword_intelligence: { fields: ["brand", "site", "category", "competitors", "market_text"], uiFields: ["attachment_id", "content_language", "live_search", "live_search_limit", "estimate_only", "skip_keyword_pairs", "skip_keywords", "cluster_limit", "sample_limit", "markets", "geo_scope", "request_text", "target_market", "text"], contextFields: ["lang", "workspace_id"], brandField: "brand", requiredAnyOf: [["brand", "site"]], enums: { lang: ["ar", "en", "ku"] } },
 };
 
 /** One planner-readable line describing a tool's accepted options. */
