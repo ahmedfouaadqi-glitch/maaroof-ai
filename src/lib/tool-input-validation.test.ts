@@ -15,6 +15,13 @@ describe("typed tool input normalization", () => {
 
     const bizdev = normalizeToolInput("bizdev", { goals: ["retain customers", "grow revenue"] });
     expect(bizdev).toEqual({ goals: "retain customers, grow revenue" });
+    const invalidBudget = coerceToolInput("feasibility", normalizeToolInput("feasibility", {
+      budget_iqd: { amount: 125000 },
+    }));
+    expect(invalidBudget).toEqual({
+      input: {},
+      issues: [{ field: "budget_iqd", expected: "string|number" }],
+    });
   });
 
   it("coerces explicitly typed numeric, boolean, and list fields", () => {
