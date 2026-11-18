@@ -61,6 +61,8 @@ function isValidDate(value: string): boolean {
 export async function readGa4AttributionReport(
   input: Ga4ReadReportInput,
 ): Promise<Ga4ReadReportResult> {
+  if (!/^\\d+$/.test(input.propertyId)) throw new Error("invalid_ga4_property_id");
+  if (!input.accessToken.trim()) throw new Error("ga4_access_token_required");
   if (!isValidDate(input.startDate) || !isValidDate(input.endDate)) {
     throw new Error("ga4_dates_must_be_yyyy_mm_dd");
   }
