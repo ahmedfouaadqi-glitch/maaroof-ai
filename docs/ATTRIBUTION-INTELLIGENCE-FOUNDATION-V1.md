@@ -86,7 +86,8 @@ No raw IP address is included in this initial contract. Do not add it by default
   deterministic attribution models. Added in this branch.
 - **A2 — Adapter contracts:** provider normalization, explicit-consent gate for
   event-level records, in-batch deduplication, and GA4 aggregate-row mapping.
-  Contracts are added; no GA4 network connector or OAuth flow is implemented.
+  A read-only GA4 Data API reader with pagination is added; OAuth authorization,
+  token refresh, property discovery and application wiring are not implemented.
 - **A3 — Conversion and revenue normalization:** confirmed/pending/reversed
   conversion normalization, duplicate guards, currency-separated aggregation,
   explicit source-event membership, and provider-ID namespacing. Pure functions are added.
@@ -101,8 +102,9 @@ No raw IP address is included in this initial contract. Do not add it by default
 
 - This is a domain foundation, not a live analytics feature.
 - No events are being collected or stored.
-- GA4 aggregate rows can be normalized from supplied data, but no Google Analytics
-  API client, OAuth authorization, property discovery or pagination is implemented.
+- A read-only GA4 Data API runReport function is implemented with injected fetch
+  and short-lived token; it is not connected to OAuth, property discovery, UI or
+  application workflows.
 - No CRM connector, UI, report widget, scheduled job or new MAAROOF tool is wired.
 - Session totals depend on source-provided session IDs; missing IDs are counted as
   ungrouped events rather than converted into inferred sessions.
