@@ -41,6 +41,15 @@ describe("reasoning plan validation", () => {
     expect(result.rejectedTools).toEqual(["made_up_tool", "competitor_monitor"]);
   });
 
+  it("allows internal skill tools but rejects the coordinator as a sub-step", () => {
+    const result = validateReasoningPlan([
+      { tool: "teach_space", input: {} },
+      { tool: "maaroof", input: {} },
+    ], ["general"], 8);
+    expect(result.steps.map((step) => step.tool)).toEqual(["teach_space"]);
+    expect(result.rejectedTools).toEqual(["maaroof"]);
+  });
+
   it("keeps only dependencies that refer to an earlier valid step", () => {
     const result = validateReasoningPlan([
       { tool: "research", input: {} },
