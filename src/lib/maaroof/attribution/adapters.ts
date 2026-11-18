@@ -235,6 +235,7 @@ export type ConversionInput = {
   conversionId: string;
   workspaceId: string;
   occurredAt: string;
+  sessionId: string | null;
   sourceEventIds: string[];
   value: number;
   currency: string;
@@ -245,11 +246,16 @@ export const ConversionInputSchema = z.object({
   conversionId: z.string().min(1).max(200),
   workspaceId: z.string().uuid(),
   occurredAt: z.string().datetime(),
+  sessionId: z.string().min(1).max(160).nullable(),
   sourceEventIds: z.array(z.string().min(1).max(240)).max(1000),
   value: z.number().finite().nonnegative(),
   currency: z.string().regex(/^[A-Z]{3}$/),
   status: z.enum(["confirmed", "pending", "reversed"]),
-}).strict();
+}).strict().superRefine((conversion, ctx) => {
+  if (conversion.sessionId === null && conversion.sourceEventIds.length > 0) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "session_id_required_for_event_attribution", path: ["sessionId"] });
+  }
+});
 
 export type RevenueSummary = {
   workspaceId: string;
