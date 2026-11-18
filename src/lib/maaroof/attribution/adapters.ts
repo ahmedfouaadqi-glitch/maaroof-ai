@@ -209,7 +209,7 @@ export function mapGa4ReportRow(row: Ga4ReportRow): Ga4RowMapping | null {
     ? null
     : asFiniteNumber(revenueRaw);
 
-  if (sessions == null || keyEvents == null || (revenueRaw != null && revenueRaw !== "" && totalRevenue == null)) return null;
+  if (sessions == null || keyEvents == null || sessions < 0 || keyEvents < 0 || !Number.isInteger(sessions) || !Number.isInteger(keyEvents) || (revenueRaw != null && revenueRaw !== "" && totalRevenue == null)) return null;
 
   return {
     sessionSource: dimensions[0]?.value || null,
