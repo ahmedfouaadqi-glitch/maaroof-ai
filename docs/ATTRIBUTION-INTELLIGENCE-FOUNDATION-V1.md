@@ -2,10 +2,12 @@
 
 ## Scope of this increment
 
-This branch adds an isolated, pure TypeScript domain core under
-`src/lib/maaroof/attribution/`. It does not replace AI Visibility, change the
-ten AI engines, add a new tool, collect browser traffic, persist analytics, call
-Google Analytics, call CRM systems, or access Supabase.
+This branch adds an isolated Attribution Intelligence foundation under
+`src/lib/maaroof/attribution/`. The domain calculations are pure; a separate,
+explicit GA4 read function accepts an injected fetch implementation and token.
+Nothing invokes that reader automatically. The branch does not replace AI
+Visibility, change the ten AI engines, add a new tool, collect browser traffic,
+persist analytics, connect to CRM systems, or access Supabase.
 
 The goal of this first increment is to make the measurement rules explicit and
 testable before introducing any event collector or data connector.
