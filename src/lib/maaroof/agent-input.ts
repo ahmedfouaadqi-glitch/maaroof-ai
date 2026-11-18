@@ -14,14 +14,14 @@ export type EntityContext = {
 };
 
 /** Backward-compatible view of required fields, derived from tool metadata. */
-export const REQUIRED_FIELDS: Record<string, string[]> = Object.fromEntries(
-  Object.entries(TOOL_OPTIONS)
-    .map(([tool, options]) => [
-      tool,
-      options.requiredFields?.length ? options.requiredFields : (options.requiredAnyOf || []).map((group) => group[0]).filter(Boolean),
-    ])
-    .filter(([, fields]) => fields.length),
-);
+const REQUIRED_FIELD_ENTRIES: Array<[string, string[]]> = Object.entries(TOOL_OPTIONS)
+  .map(([tool, options]): [string, string[]] => [
+    tool,
+    options.requiredFields?.length ? options.requiredFields : (options.requiredAnyOf || []).map((group) => group[0]).filter(Boolean),
+  ])
+  .filter(([, fields]) => fields.length);
+
+export const REQUIRED_FIELDS: Record<string, string[]> = Object.fromEntries(REQUIRED_FIELD_ENTRIES);
 
 const ANY_BRAND = ["brand", "brand_name", "company", "business_name", "project_name"];
 
