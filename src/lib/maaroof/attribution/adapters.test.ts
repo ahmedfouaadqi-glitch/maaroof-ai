@@ -66,8 +66,6 @@ describe("GA4 mapping", () => {
         { value: "chatgpt.com" },
         { value: "referral" },
         { value: "(not set)" },
-        { value: "https://chatgpt.com/" },
-        { value: "/pricing" },
       ],
       metricValues: [{ value: "12" }, { value: "2" }, { value: "125.50" }],
     });
@@ -79,7 +77,7 @@ describe("GA4 mapping", () => {
 
   it("rejects negative or fractional GA4 count metrics", () => {
     const row = {
-      dimensionValues: Array.from({ length: 5 }, () => ({ value: "x" })),
+      dimensionValues: Array.from({ length: 3 }, () => ({ value: "x" })),
       metricValues: [{ value: "-1" }, { value: "1" }, { value: "0" }],
     };
     expect(mapGa4ReportRow(row)).toBeNull();
