@@ -160,19 +160,28 @@ export function fillToolInput(tool: string, input: any, ctx: EntityContext): Rec
 
 /** Required fields still empty after filling. */
 export function missingFields(tool: string, input: Record<string, any>): string[] {
-  if (tool === "keyword_intelligence") {
-    // The endpoint can derive a brand from a valid explicit site URL; otherwise it needs a brand.
-    const site = str(input.site);
-    let validSite = false;
-    if (site) {
-      try {
-        const url = new URL(site);
-        validSite = (url.protocol === "http:" || url.protocol === "https:") && !!url.hostname;
-      } catch {}
-    }
-    return str(input.brand) || validSite ? [] : ["brand"];
+  const options = TOOL_OPTIONS[tool];
+  if (!options) return [];
+  const missing = (options.requiredFields || []).filter((key) => {
+    const minimum = options.minLength?.[key] ?? 2;
+    return str(input[key]).length < minimum;
+  });
+  for (const group of options.requiredAnyOf || []) {
+    const satisfied = group.some((key) => {
+      const value = str(input[key]);
+      if (key === "site" && tool === "keyword_intelligence") {
+        try {
+          const url = new URL(value);
+          return (url.protocol === "http:" || url.protocol === "https:") && !!url.hostname;
+        } catch {
+          return false;
+        }
+      }
+      return value.length >= 2;
+    });
+    if (!satisfied) missing.push(group[0] || "brand");
   }
-  return (REQUIRED_FIELDS[tool] || []).filter((k) => str(input[k]).length < (tool === "geo_rewrite" && k === "text" ? MIN_REWRITE_SOURCE_LENGTH : 2));
+  return missing;
 }
 
 /** Competitor names recorded by earlier successful steps of the same task (never invented). */
