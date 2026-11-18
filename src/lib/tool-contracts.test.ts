@@ -40,6 +40,16 @@ describe("canonical tool execution contracts", () => {
     expect(getSkillExecutableToolKeys().sort()).toEqual(getPlannerSelectableToolKeys().sort());
   });
 
+  it("separates planner inputs from UI-only and injected context fields", () => {
+    expect(TOOL_OPTIONS.keyword_intelligence.fields).toContain("brand");
+    expect(TOOL_OPTIONS.keyword_intelligence.uiFields).toContain("live_search");
+    expect(TOOL_OPTIONS.keyword_intelligence.uiFields).toContain("attachment_id");
+    expect(TOOL_OPTIONS.keyword_intelligence.contextFields).toContain("workspace_id");
+    expect(TOOL_OPTIONS.keyword_intelligence.fields).not.toContain("estimate_only");
+    expect(TOOL_OPTIONS.research.uiFields).toContain("channel_types");
+    expect(TOOL_OPTIONS.social_analysis.contextFields).toContain("official_website");
+  });
+
   it("preserves the legacy competitor_compare alias", () => {
     expect(getToolPath("competitor_compare")).toBe("/api/compare");
     expect(getToolPath("compare")).toBe("/api/compare");
