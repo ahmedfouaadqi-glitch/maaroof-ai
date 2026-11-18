@@ -26,6 +26,11 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Run unit tests
         run: bun run test -- --reporter=dot
+      - name: TypeScript check
+        if: ${{ always() && steps.install.outcome == 'success' }}
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: bunx tsc --noEmit
       - name: Build application
         if: ${{ always() && steps.install.outcome == 'success' }}
         env:
