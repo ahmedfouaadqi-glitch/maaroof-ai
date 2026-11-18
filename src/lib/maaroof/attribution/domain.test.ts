@@ -66,11 +66,11 @@ describe("classifyTrafficSource", () => {
 });
 
 const touches: Touchpoint[] = [
-  { eventId: "a", workspaceId: "11111111-1111-4111-8111-111111111111", occurredAt: "2026-01-01T10:00:00.000Z", channel: "organic_search", source: "google.com" },
-  { eventId: "crawler", workspaceId: "11111111-1111-4111-8111-111111111111", occurredAt: "2026-01-01T11:00:00.000Z", channel: "crawler", source: null },
-  { eventId: "b", workspaceId: "11111111-1111-4111-8111-111111111111", occurredAt: "2026-01-02T10:00:00.000Z", channel: "ai_referral", source: "chatgpt.com" },
-  { eventId: "other-workspace", workspaceId: "22222222-2222-4222-8222-222222222222", occurredAt: "2026-01-02T11:00:00.000Z", channel: "social", source: "linkedin.com" },
-  { eventId: "future", workspaceId: "11111111-1111-4111-8111-111111111111", occurredAt: "2026-01-04T10:00:00.000Z", channel: "direct", source: "(direct)" },
+  { eventId: "a", workspaceId: "11111111-1111-4111-8111-111111111111", sessionId: "session-1", occurredAt: "2026-01-01T10:00:00.000Z", channel: "organic_search", source: "google.com" },
+  { eventId: "crawler", workspaceId: "11111111-1111-4111-8111-111111111111", sessionId: "session-1", occurredAt: "2026-01-01T11:00:00.000Z", channel: "crawler", source: null },
+  { eventId: "b", workspaceId: "11111111-1111-4111-8111-111111111111", sessionId: "session-1", occurredAt: "2026-01-02T10:00:00.000Z", channel: "ai_referral", source: "chatgpt.com" },
+  { eventId: "other-workspace", workspaceId: "22222222-2222-4222-8222-222222222222", sessionId: "other-session", occurredAt: "2026-01-02T11:00:00.000Z", channel: "social", source: "linkedin.com" },
+  { eventId: "future", workspaceId: "11111111-1111-4111-8111-111111111111", sessionId: "session-1", occurredAt: "2026-01-04T10:00:00.000Z", channel: "direct", source: "(direct)" },
 ];
 
 const conversion = {
@@ -98,15 +98,15 @@ describe("attributeConversion", () => {
   it("does not let a later direct touch overwrite a known non-direct touch in last-non-direct", () => {
     const withDirect: Touchpoint[] = [
       ...touches,
-      { eventId: "direct", workspaceId: conversion.workspaceId, occurredAt: "2026-01-02T18:00:00.000Z", channel: "direct", source: "(direct)" },
+      { eventId: "direct", workspaceId: conversion.workspaceId, sessionId: "session-1", occurredAt: "2026-01-02T18:00:00.000Z", channel: "direct", source: "(direct)" },
     ];
     expect(attributeConversion(conversion, withDirect, "last_non_direct").credits[0].eventId).toBe("b");
   });
 
   it("keeps time-decay weights finite for very old touchpoints", () => {
     const oldTouches: Touchpoint[] = [
-      { eventId: "old", workspaceId: conversion.workspaceId, occurredAt: "1900-01-01T00:00:00.000Z", channel: "organic_search", source: "google.com" },
-      { eventId: "recent", workspaceId: conversion.workspaceId, occurredAt: "2026-01-02T00:00:00.000Z", channel: "ai_referral", source: "chatgpt.com" },
+      { eventId: "old", workspaceId: conversion.workspaceId, sessionId: "session-1", occurredAt: "1900-01-01T00:00:00.000Z", channel: "organic_search", source: "google.com" },
+      { eventId: "recent", workspaceId: conversion.workspaceId, sessionId: "session-1", occurredAt: "2026-01-02T00:00:00.000Z", channel: "ai_referral", source: "chatgpt.com" },
     ];
     const credits = attributeConversion(conversion, oldTouches, "time_decay").credits;
     expect(credits.every((item) => Number.isFinite(item.credit))).toBe(true);
