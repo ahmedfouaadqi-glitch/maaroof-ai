@@ -45,7 +45,11 @@ export const AttributionEventSchema = z.object({
   consent: z.enum(["granted", "denied", "unknown"]).default("unknown"),
   value: z.number().finite().nonnegative().optional(),
   currency: z.string().regex(/^[A-Z]{3}$/).optional(),
-}).strict();
+}).strict().superRefine((value, ctx) => {
+  if ((value.value === undefined) !== (value.currency === undefined)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "value_and_currency_must_be_supplied_together", path: ["currency"] });
+  }
+});
 
 export type AttributionEvent = z.infer<typeof AttributionEventSchema>;
 
@@ -85,7 +89,7 @@ const SOCIAL_HOSTS = new Set([
 ]);
 
 const CRAWLER_UA_MARKERS = [
-  "bot", "crawler", "spider", "slurp", "gptbot", "chatgpt-user",
+  "crawler", "spider", "slurp", "gptbot", "chatgpt-user",
   "oai-searchbot", "claudebot", "claude-web", "perplexitybot",
   "google-extended", "googlebot", "bingbot", "bytespider",
   "facebookexternalhit", "linkedinbot", "applebot", "ccbot",
@@ -128,7 +132,7 @@ export function classifyTrafficSource(input: {
   utmMedium?: string | null;
 }): SourceClassification {
   const ua = (input.userAgent || "").toLowerCase();
-  if (CRAWLER_UA_MARKERS.some((marker) => ua.includes(marker))) {
+  if (CRAWLER_UA_MARKERS.some((marker) => ua.includes(marker)) || /(?:^|[\\s;(/])(?:[a-z0-9._-]*bot)(?:[\\s/;)]|$)/i.test(ua)) {
     return {
       channel: "crawler", source: null, medium: "bot",
       confidence: "medium", evidence: "user_agent",
@@ -156,7 +160,7 @@ export function classifyTrafficSource(input: {
   }
 
   if (utmSource) {
-    if (/^(cpc|ppc|paidsearch|paid-search)$/.test(utmMedium)) {
+    if (utmMedium === "organic") {\n      return { channel: "organic_search", source: utmSource, medium: "organic", confidence: "medium", evidence: "utm", reason: "Client-supplied organic search campaign tagging." };\n    }\n    if (/^(cpc|ppc|paidsearch|paid-search)$/.test(utmMedium)) {
       return { channel: "paid_search", source: utmSource, medium: utmMedium, confidence: "medium", evidence: "utm", reason: "Client-supplied paid-search campaign tagging." };
     }
     if (/^(email|e-mail)$/.test(utmMedium)) {
