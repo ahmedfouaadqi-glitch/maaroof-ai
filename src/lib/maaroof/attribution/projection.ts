@@ -42,6 +42,8 @@ export type AttributionProjection = {
     aiReferralEvents: number;
     crawlerMarkerEvents: number;
     confirmedConversions: number;
+    pendingConversions: number;
+    reversedConversions: number;
     unattributedConversions: number;
   };
   channelAttribution: ChannelAttributionRow[];
@@ -118,10 +120,13 @@ export function buildAttributionProjection(
 
   const buckets = new Map<string, Bucket>();
   let confirmedConversions = 0;
+  let pendingConversions = 0;
+  let reversedConversions = 0;
   let unattributedConversions = 0;
 
   for (const conversion of parsedConversions) {
-    if (conversion.status !== "confirmed") continue;
+    if (conversion.status === "pending") { pendingConversions += 1; continue; }
+    if (conversion.status === "reversed") { reversedConversions += 1; continue; }
     confirmedConversions += 1;
 
     const result = attributeConversion(
@@ -187,6 +192,8 @@ export function buildAttributionProjection(
       aiReferralEvents,
       crawlerMarkerEvents,
       confirmedConversions,
+      pendingConversions,
+      reversedConversions,
       unattributedConversions,
     },
     channelAttribution: [...buckets.values()].map((bucket) => ({
