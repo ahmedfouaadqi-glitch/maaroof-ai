@@ -22,8 +22,10 @@ jobs:
         with:
           bun-version: latest
       - name: Install dependencies
+        id: install
         run: bun install --frozen-lockfile
       - name: Run unit tests
         run: bun run test -- --reporter=dot
       - name: Build application
+        if: ${{ always() && steps.install.outcome == 'success' }}
         run: bun run build
