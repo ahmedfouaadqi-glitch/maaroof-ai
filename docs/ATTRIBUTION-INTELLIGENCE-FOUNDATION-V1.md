@@ -121,6 +121,32 @@ No raw IP address is included in this initial contract. Do not add it by default
 - The domain core does not verify whether a user-agent is genuine; production
   crawler verification requires network/source validation beyond a UA string.
 
+## Integration risks identified in the existing code
+
+- Direct visibility requests explicitly resolve the signed-in user and verify
+  workspace ownership before reading workspace data.
+- Social analysis uses the shared workspace guard and then scopes the workspace
+  lookup to the signed-in owner.
+- The shared workspace guard permits requests without a workspace ID to run in
+  account-level scope; new attribution endpoints must define whether that scope
+  is permitted rather than inheriting it accidentally.
+- Existing report server functions authenticate the user, but several report
+  reads and state transitions filter by report ID or workspace ID without an
+  explicit owner lookup in the function body. Their tenant safety therefore
+  depends on the applicable Supabase RLS policies.
+- Supabase policies and live cross-tenant behavior were not inspected or tested.
+  For that reason this branch does not write attribution data, wire into report
+  persistence, or claim verified tenant isolation.
+
+## External API references
+
+- Google Analytics Data API `properties.runReport` reference:
+  https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta/properties/runReport
+- Google Analytics Data API dimensions and metrics:
+  https://developers.google.com/analytics/devguides/reporting/data/v1/api-schema
+- Google Analytics Data API report creation and pagination:
+  https://developers.google.com/analytics/devguides/reporting/data/v1/basics
+
 ## Acceptance criteria for this increment
 
 - Explicit AI referrer and UTM fixtures classify as AI referrals.
