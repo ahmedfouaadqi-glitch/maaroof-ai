@@ -10,6 +10,10 @@ const LABELS: Record<ExportLang, {
   attributedRevenue: string;
   currency: string;
   trafficEvents: string;
+  humanSessions: string;
+  aiReferralSessions: string;
+  crawlerSessions: string;
+  eventsWithoutSessionId: string;
   aiReferrals: string;
   crawlerEvents: string;
   conversions: string;
@@ -29,6 +33,10 @@ const LABELS: Record<ExportLang, {
     attributedRevenue: "الإيراد المنسوب",
     currency: "العملة",
     trafficEvents: "أحداث الزيارات المسجلة",
+    humanSessions: "الجلسات البشرية",
+    aiReferralSessions: "جلسات إحالة AI",
+    crawlerSessions: "جلسات الزواحف",
+    eventsWithoutSessionId: "أحداث بلا معرّف جلسة",
     aiReferrals: "إحالات AI المسجلة",
     crawlerEvents: "أحداث الزواحف",
     conversions: "التحويلات المؤكدة",
@@ -48,6 +56,10 @@ const LABELS: Record<ExportLang, {
     attributedRevenue: "Attributed revenue",
     currency: "Currency",
     trafficEvents: "Recorded traffic events",
+    humanSessions: "Human sessions",
+    aiReferralSessions: "AI referral sessions",
+    crawlerSessions: "Crawler sessions",
+    eventsWithoutSessionId: "Events without session ID",
     aiReferrals: "Recorded AI referrals",
     crawlerEvents: "Crawler events",
     conversions: "Confirmed conversions",
@@ -67,6 +79,10 @@ const LABELS: Record<ExportLang, {
     attributedRevenue: "داهاتی تەرخانکراو",
     currency: "دراو",
     trafficEvents: "ڕووداوەکانی هاتووچۆی تۆمارکراو",
+    humanSessions: "دانیشتنە مرۆییەکان",
+    aiReferralSessions: "دانیشتنەکانی ئاماژەی AI",
+    crawlerSessions: "دانیشتنەکانی کراولەر",
+    eventsWithoutSessionId: "ڕووداوەکانی بێ ناسنامەی دانیشتن",
     aiReferrals: "ئاماژەکانی AI",
     crawlerEvents: "ڕووداوەکانی کراولەر",
     conversions: "گۆڕانکارییە پشتڕاستکراوەکان",
@@ -95,6 +111,10 @@ export function toAttributionExportSections(
     rows: [
       [labels.status, statusLabel(projection.measurementStatus, lang)],
       [labels.trafficEvents, projection.counts.acceptedTrafficEvents],
+      [labels.humanSessions, projection.counts.humanSessions],
+      [labels.aiReferralSessions, projection.counts.aiReferralSessions],
+      [labels.crawlerSessions, projection.counts.crawlerSessions],
+      [labels.eventsWithoutSessionId, projection.counts.eventsWithoutSessionId],
       [labels.aiReferrals, projection.counts.aiReferralEvents],
       [labels.crawlerEvents, projection.counts.crawlerMarkerEvents],
       [labels.conversions, projection.counts.confirmedConversions],
