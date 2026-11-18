@@ -45,6 +45,14 @@ describe("agent-input", () => {
   it("asks for brand or site when keyword intelligence has no identity context", () => {
     expect(missingFields("keyword_intelligence", {})).toEqual(["brand"]);
   });
+  it("validates endpoint source requirements before dispatch", () => {
+    expect(missingFields("analyze", {})).toEqual(["text"]);
+    expect(missingFields("analyze", { text: "short" })).toEqual(["text"]);
+    expect(missingFields("analyze", { text: "This is a sufficiently long analysis source." })).toEqual([]);
+    expect(missingFields("suggest", { sourceText: "A user supplied source passage." })).toEqual([]);
+    expect(missingFields("suggest", { imageBase64: "data:image/png;base64,abc" })).toEqual([]);
+  });
+
   it("reports missing required fields", () => {
     expect(missingFields("visibility", fillToolInput("visibility", {}, {}))).toEqual(["brand"]);
     expect(missingFields("research", fillToolInput("research", {}, { goal: "best perfume shops" }))).toEqual([]);
