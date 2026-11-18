@@ -151,7 +151,7 @@ describe("buildAttributionProjection", () => {
         conversionId: "order-1",
         workspaceId,
         occurredAt: "2026-02-02T10:00:00.000Z",
-        sourceEventIds: ["evt-1"],
+        sourceEventIds: ["first_party:evt-1"],
         value: 100,
         currency: "USD",
         status: "confirmed",
