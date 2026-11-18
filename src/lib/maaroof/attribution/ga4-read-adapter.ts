@@ -1,7 +1,7 @@
 import {
   mapGa4ReportRow,
   type Ga4ReportRow,
-  type Ga4ReadAdapter,
+  type Ga4RowMapping,
 } from "./adapters";
 
 const GA4_DIMENSIONS = [
@@ -37,7 +37,7 @@ export type Ga4ReadReportInput = {
 };
 
 export type Ga4ReadReportResult = {
-  rows: ReturnType<typeof mapGa4ReportRow> extends infer T ? Exclude<T, null>[] : never;
+  rows: Ga4RowMapping[];
   currencyCode?: string;
   warnings: string[];
 };
@@ -49,13 +49,6 @@ export type Ga4ReadReportResult = {
  * outside this module. The caller supplies a short-lived access token and a
  * fetch implementation, which also makes the adapter deterministic in tests.
  */
-export const ga4ReadAdapter: Ga4ReadAdapter = {
-  provider: "ga4",
-  async readReport(input) {
-    throw new Error("Use readGa4AttributionReport with an explicit access token and fetch implementation.");
-  },
-};
-
 export async function readGa4AttributionReport(
   input: Ga4ReadReportInput,
 ): Promise<Ga4ReadReportResult> {
