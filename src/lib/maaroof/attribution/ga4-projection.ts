@@ -94,6 +94,7 @@ export function projectGa4AttributionRows(input: {
       "GA4 session attribution is reported as supplied by GA4; this projection does not recompute first-touch or multi-touch journeys.",
       "AI referral sessions require a recognized AI source or referrer in the returned GA4 dimensions; stripped or grouped sources may be unavailable.",
       "Key events are GA4-configured events and are not automatically equivalent to qualified leads or closed sales.",
+      "Crawler traffic cannot be separated from these aggregate rows by this projection; use a separately verified server-log or bot-observation source.",
       "Revenue remains in the GA4 property currency; no foreign-exchange conversion is performed.",
     ],
   };
