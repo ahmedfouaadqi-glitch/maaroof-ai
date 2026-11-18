@@ -3,6 +3,7 @@
 // No match => clarify (never guess).
 import { MAAROOF_SKILLS, recommendMaaroofSkills } from "./skill-catalog";
 import { getSkillExecutableToolKeys } from "@/lib/tool-contracts";
+import { getSkillExecutionContract } from "./skill-contracts";
 
 /** Derived from the canonical execution contracts; paused/special keys stay excluded. */
 export const EXECUTABLE_TOOLS = new Set<string>(getSkillExecutableToolKeys());
@@ -72,6 +73,13 @@ export function chooseSkillsAutonomously(goal: string, selected: string[], own: 
 /** Executable tools for the given skills (drops tools without a route). */
 export function executableToolsFor(skills: string[]): string[] {
   const out: string[] = [];
-  for (const k of skills) for (const t of MAAROOF_SKILLS.find((s) => s.key === k)?.tools || []) if (EXECUTABLE_TOOLS.has(t) && !out.includes(t)) out.push(t);
+  for (const key of skills) {
+    const contract = getSkillExecutionContract(key);
+    for (const tool of contract?.tools || []) {
+      if (EXECUTABLE_TOOLS.has(tool.key) && tool.contract?.skillExecutable && !out.includes(tool.key)) {
+        out.push(tool.key);
+      }
+    }
+  }
   return out;
 }
