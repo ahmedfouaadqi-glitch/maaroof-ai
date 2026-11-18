@@ -120,9 +120,10 @@ describe("aggregateRevenue", () => {
       { ...conversion, conversionId: "yen-valid", currency: "JPY", value: 100 },
       { ...conversion, conversionId: "yen-invalid", currency: "JPY", value: 100.5 },
       { ...conversion, conversionId: "usd-invalid", currency: "USD", value: 1.001 },
+      { ...conversion, conversionId: "currency-invalid", currency: "ZZZ", value: 10 },
     ]);
     expect(result.summaries.find((item) => item.currency === "JPY")?.confirmedRevenue).toBe(100);
-    expect(result.rejected).toHaveLength(2);
+    expect(result.rejected).toHaveLength(3);
   });
 
   it("does not add pending or reversed revenue to confirmed revenue", () => {
