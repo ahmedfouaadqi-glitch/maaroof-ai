@@ -1223,7 +1223,7 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       try {
         const { stripAgentOnlyFields } = await import("./probe-answer");
         const N = await import("./narration");
-        const normalizedInput = normalizeToolInput(enforceEnums(step.tool, filled));
+        const normalizedInput = normalizeToolInput(step.tool, enforceEnums(step.tool, filled));
         const typedInput = coerceToolInput(step.tool, normalizedInput);
         if (typedInput.issues.length) {
           await ctx.emit("tool_input_warning", {
