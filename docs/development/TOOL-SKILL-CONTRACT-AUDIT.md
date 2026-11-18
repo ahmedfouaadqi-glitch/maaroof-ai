@@ -185,3 +185,29 @@
 - TypeScript: the check ran and reported only errors in the same attribution test file: TS2307 for missing ./domain, followed by TS7006 implicit-any errors for callback parameters whose types depend on that missing module. No TypeScript errors were reported in the modified contract/orchestrator/agent-input files.
 - Production build: client 22.57s, SSR 11.41s, Nitro 27.48s; all succeeded with NODE_OPTIONS=--max-old-space-size=4096.
 - Conclusion: the run remains failure due the known attribution source/revert inconsistency. The contract changes pass Vitest; the new typecheck is blocked by the same baseline missing file; production build passes.
+
+
+## 16. استكمال أنواع المدخلات والتحقق وقت التنفيذ — 2026-11-19
+
+- أضيفت `fieldTypes` إلى `ToolOptions` لتوثيق الأنواع المعروفة صراحةً لبعض مدخلات endpoints، مع قيد متعمد: الحقول غير المدرجة تبقى pass-through ولا تُرفض، للمحافظة على توافق الحقول الخاصة بكل route.
+- أضيفت `src/lib/tool-input-validation.ts` لتطبيع الأنواع المعلنة فقط: string وstring[] وnumber وboolean وobject. القيم المعلنة غير الصالحة تُحذف من body وتنتج issue محدداً باسم الحقل والنوع المتوقع؛ الحقول غير المعروفة لا تُحذف.
+- رُبط التطبيع بمسار التنفيذ في `orchestrator.server.ts` بعد تطبيع المدخلات وتطبيق enums وقبل dispatch. يصدر الحدث `tool_input_warning` عند إسقاط قيم ذات نوع غير صالح.
+- أضيفت `src/lib/tool-input-validation.test.ts` لتغطية التحويل الرقمي والمنطقي والقوائم، الحفاظ على false/0، إسقاط القيم غير الصالحة، إبقاء الحقول غير المعلنة، والتحقق من أن metadata لا تشير إلى حقول خارج طبقات fields/uiFields/contextFields.
+- هذه ليست بعد JSON Schema كاملة لكل endpoint: لم تُعلن أنواع غير مؤكدة، ولم تُفرض allowlist للحقول، ولم تُخترع حدود قصوى أو defaults غير مثبتة. يجب استكمال المصفوفة route-by-route قبل اعتبار العقود مكتملة.
+
+## 17. تحقق CI الأحدث قبل إضافة fieldTypes
+
+### Run 44422365396
+
+- Vitest: 144 test files passed، وملف واحد failed من أصل 145؛ 747 اختباراً passed و3 skipped (750 إجمالاً).
+- الفشل الوحيد: `src/lib/maaroof/attribution/domain.test.ts` لا يجد `./domain`.
+- TypeScript: TS2307 للاستيراد المفقود، ثم TS7006 للوسائط التي فقدت أنواعها بسبب غياب المصدر؛ لا توجد أخطاء مسجلة في ملفات العقد/المنسق المعدلة في هذا التشغيل.
+- Production build: نجح؛ اكتمل بناء Nitro في 28.44 ثانية.
+- هذا التشغيل يسبق commits الخاصة بـ `fieldTypes` و`tool-input-validation`؛ لا يُستخدم لإثبات صحتها. يلزم CI جديد على HEAD الحالي.
+
+## 18. الحالة الحالية للمرحلة الثانية
+
+- مكتمل على الفرع: سجل تصنيف التنفيذ المركزي، اشتقاق planner/skill eligibility، مطابقة catalog/options/dispatch، metadata الهوية والحقول المطلوبة، وإضافة طبقات planner/UI/context.
+- بدأ ولم يكتمل: أنواع الحقول المعلنة وتطبيعها وقت التنفيذ؛ التغطية الحالية انتقائية ومقصودة وليست schema شاملة.
+- المتبقي قبل الإغلاق: تشغيل CI على أحدث HEAD؛ مراجعة أنواع وقيود كل endpoint مقابل route الفعلي؛ اختبار المدخلات المطلوبة لـ keyword_intelligence في workspace/account mode؛ مراجعة output/result contract لكل أداة؛ مراجعة diff النهائي وحصر الملفات المستثناة؛ وتحديث معايير القبول.
+- لا يبدأ Phase 3 قبل إغلاق Phase 2 وفق معايير القبول.
