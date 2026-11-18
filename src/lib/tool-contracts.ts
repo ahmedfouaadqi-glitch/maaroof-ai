@@ -31,7 +31,7 @@ const API_OUTPUTS: Partial<Record<ToolKey, ToolOutputContract>> = {
   company_email: { transport: "json", successKind: "top_level_object", successFields: ["mode", "sources", "specialty"], errorField: "error" },
   applied_ranking: { transport: "json", successKind: "result_envelope", successFields: ["ok", "result"], errorField: "error" },
   geo_strategist: { transport: "json", successKind: "top_level_object", successFields: ["id", "horizon", "timeframe", "realism_note", "sources"], errorField: "error" },
-  competitor_monitor: { transport: "json", successKind: "paused_response", successFields: [], errorField: "error" },
+  competitor_monitor: { transport: "internal", successKind: "paused_response", successFields: ["skipped"], errorField: "error" },
   social_analysis: { transport: "json", successKind: "top_level_object", successFields: ["operation_id", "brand", "market", "platforms", "query_coverage", "sentiment", "share_of_voice", "analysis_status", "best_platforms", "content_gaps", "post_ideas", "summary"], errorField: "error" },
   what_if: { transport: "json", successKind: "top_level_object", successFields: ["summary", "engine_projections", "estimated_cost", "time_to_impact_weeks", "risks", "final_recommendation"], errorField: "error" },
   brand_authority: { transport: "json", successKind: "top_level_object", successFields: ["operation_id", "slug", "public_url", "publication_scope", "published_on_customer_domain", "summary", "markdown", "json_ld", "ping"], errorField: "error" },
