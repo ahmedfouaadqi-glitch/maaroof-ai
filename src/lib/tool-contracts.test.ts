@@ -45,6 +45,7 @@ describe("canonical tool execution contracts", () => {
     expect(TOOL_CONTRACTS.translate.billingOwner).toBe("orchestrator");
     expect(TOOL_CONTRACTS.teach_space.billingOwner).toBe("none");
     expect(TOOL_CONTRACTS.maaroof.authorizationOwner).toBe("route");
+    expect(TOOL_CONTRACTS.competitor_monitor.authorizationOwner).toBe("none");
     expect(TOOL_CONTRACTS.competitor_monitor.billingOwner).toBe("none");
   });
 
