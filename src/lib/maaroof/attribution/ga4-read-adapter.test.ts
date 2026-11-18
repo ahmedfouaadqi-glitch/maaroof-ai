@@ -14,8 +14,6 @@ const ga4Row = (source: string) => ({
     { value: source },
     { value: "referral" },
     { value: "(not set)" },
-    { value: "https://chatgpt.com/" },
-    { value: "/landing" },
   ],
   metricValues: [{ value: "5" }, { value: "1" }, { value: "10.00" }],
 });
