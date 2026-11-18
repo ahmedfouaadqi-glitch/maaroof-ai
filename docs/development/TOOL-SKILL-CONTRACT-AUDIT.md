@@ -126,3 +126,29 @@
 - لا توجد node_modules/Bun في بيئة الأرشيف السابقة؛ لذلك لا أدعي نجاح Vitest أو TypeScript أو lint أو build لهذه التغييرات.
 - أضيفت اختبارات عقد واختبارات regression، لكنها تبقى غير متحققة تشغيلياً حتى تشغيلها في بيئة المشروع.
 - يجب مراجعة diff الفعلي ثم تشغيل الاختبارات قبل اعتماد هذه التغييرات أو الانتقال إلى بقية المرحلة الثانية.
+
+
+## 12. فصل مدخلات المخطط عن واجهة المستخدم والسياق
+
+تم توسيع ToolOptions إلى ثلاث طبقات واضحة:
+- `fields`: مدخلات يمكن للمخطط اقتراحها كجزء من المهمة.
+- `uiFields`: حقول واجهة/تشغيل مثل رفع المرفقات وخيارات البحث الحي ووضع estimate/expand، ولا تُرسل تلقائياً إلى prompt المخطط.
+- `contextFields`: قيم يحقنها النظام من اللغة والنطاق ومساحة العمل وهوية الكيان.
+
+تم تصنيف هذه الطبقات للأدوات الـ18، مع تصحيح حقول معروفة:
+- known: إضافة keywords كمدخل planner، والإبقاء على force كخيار UI، وurl كقيمة سياق/alias.
+- geo_strategist: إضافة timeframe كمدخل planner.
+- research: تصنيف include_channels وchannel_types وforce كخيارات UI.
+- visibility: تصنيف background كخيار UI وofficial_website كسياق.
+- brand_boost: website_url كسياق.
+- social_analysis: official_website كسياق.
+- keyword_intelligence: فصل attachment_id وcontent_language والبحث الحي والحدود وخيارات estimate/expand وأسواق/geo scope عن مدخلات planner؛ lang وworkspace_id سياق.
+
+هذا الفصل لا يحول ToolOptions إلى schema runtime؛ لا تزال أنواع الحقول، الحدود العددية، التحقق من URL، والتزامات كل endpoint بحاجة إلى schemas واختبارات أكثر دقة.
+
+## 13. نتائج CI على فرع العمل
+
+- تم توسيع push branch filter في workflow ليشمل work/** على فرع العمل فقط، حتى يمكن التحقق من تغييرات هذه الخطة دون فتح PR أو لمس main.
+- في run 44420833674 (commit 137eb0604ef22125da9987d1ecbc33ce0f5ffb86): نجح install؛ 144 test files passed وواحدة failed؛ 743 tests passed و3 skipped. الفشل الوحيد بقي attribution/domain.test.ts بسبب domain.ts المحذوف بواسطة revert 70095aa9. هذا يعني أن suite الجديدة الخاصة بالعقود والـ regression اجتازت التشغيل في هذا run.
+- أضيف شرط build step ليعمل بعد نجاح install حتى لو فشلت unit tests، بدلاً من تخطيه بسبب test failure. run 44420981714 بدأ تشغيل build مستقلاً بعد فشل الاختبارات؛ لم يُسجل نجاحه بعد عند آخر مراجعة.
+- run 44421120229 على التغييرات الأحدث كان قيد التشغيل؛ لا تُسجل نتيجته قبل اكتماله.
