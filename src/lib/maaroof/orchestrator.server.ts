@@ -1176,10 +1176,25 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       // Fill missing inputs from goal / workspace / Entity Truth Card; ask instead of failing.
       const { fillFromTask, taskEntity, taskEntityInput } = await import("./agent-input");
       const filled = fillFromTask(step.tool, fillToolInput(step.tool, taskEntityInput(step.tool, step.input, results), { goalBrand: clarBrand || taskEntity(results)?.brand, workspace: workspaceProfile, profile: entityProfile, goal: ctx.goal }), results, { goal: ctx.goal, workspace: workspaceProfile, profile: entityProfile });
-      const missing = missingFields(step.tool, filled);
+      const normalizedInput = normalizeToolInput(step.tool, enforceEnums(step.tool, filled));
+      const typedInput = coerceToolInput(step.tool, normalizedInput);
+      if (typedInput.issues.length) {
+        await ctx.emit("tool_input_warning", {
+          tool: step.tool,
+          fields: typedInput.issues.map((issue) => ({ field: issue.field, expected: issue.expected })),
+        });
+      }
+      const missing = missingFields(step.tool, typedInput.input);
+      if (missing.length) {
+        const q = { index: i, tool: step.tool, field: missing[0], question: clarifyQuestion(missing[0], ctx.language) };
+        results.push({ tool: step.tool, ok: false, output: { needs_input: missing } });
+        await ctx.emit("clarify", q);
+        await logMsg("clarify", q);
+        return;
+      }
       // No competitors anywhere: skip before any charge with a clear reason instead of failing.
-      if ((step.tool === "compare" || (step.tool === "competitor_monitor" && (filled as any).action === "create"))
-        && !(Array.isArray((filled as any).competitors) && (filled as any).competitors.length) && !String((filled as any).competitors || "").trim()) {
+      if ((step.tool === "compare" || (step.tool === "competitor_monitor" && (typedInput.input as any).action === "create"))
+        && !(Array.isArray((typedInput.input as any).competitors) && (typedInput.input as any).competitors.length) && !String((typedInput.input as any).competitors || "").trim()) {
         const skip = { skipped: "no_competitors_found", tool: step.tool };
         results.push({ tool: step.tool, ok: false, output: skip });
         await ctx.emit("tool_result", { index: i, tool: step.tool, ok: false, output: skip });
@@ -1209,28 +1224,13 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       // Default: ask all ten engines live (entitlement/plan limits are enforced server-side).
       // Every task asks all ten engines; a shorter list chosen by the planner is ignored.
       if (step.tool === "visibility" && ctx.liveProbe !== false) {
-        try { const { ENGINE_KEYS } = await import("@/lib/ai-engines"); (filled as any).probe_engines = [...ENGINE_KEYS]; } catch {}
-      }
-      if (missing.length) {
-        const q = { index: i, tool: step.tool, field: missing[0], question: clarifyQuestion(missing[0], ctx.language) };
-        results.push({ tool: step.tool, ok: false, output: { needs_input: missing } });
-        await ctx.emit("clarify", q);
-        await logMsg("clarify", q);
-      return;
+        try { const { ENGINE_KEYS } = await import("@/lib/ai-engines"); (typedInput.input as any).probe_engines = [...ENGINE_KEYS]; } catch {}
       }
       const toolStartedAt = Date.now();
       let toolTransport: "direct" | "http_fallback" = "direct";
       try {
         const { stripAgentOnlyFields } = await import("./probe-answer");
         const N = await import("./narration");
-        const normalizedInput = normalizeToolInput(step.tool, enforceEnums(step.tool, filled));
-        const typedInput = coerceToolInput(step.tool, normalizedInput);
-        if (typedInput.issues.length) {
-          await ctx.emit("tool_input_warning", {
-            tool: step.tool,
-            fields: typedInput.issues.map((issue) => ({ field: issue.field, expected: issue.expected })),
-          });
-        }
         const body = {
            ...stripAgentOnlyFields(step.tool, typedInput.input as any),
            // Use a detected/selected country when available. An unresolved visitor scope
