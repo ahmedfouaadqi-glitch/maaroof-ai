@@ -49,8 +49,9 @@ export function coerceToolInput(
         break;
       }
       case "string[]": {
-        normalized = toStringList(value);
-        valid = normalized !== null && normalized.length > 0;
+        const list = toStringList(value);
+        normalized = list;
+        valid = list !== null && list.length > 0;
         break;
       }
       case "number": {
