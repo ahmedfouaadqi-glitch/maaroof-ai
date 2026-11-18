@@ -57,7 +57,7 @@ conversion timestamp. Crawler touchpoints are excluded.
 ## Data contract
 
 The event schema requires an event ID, timestamp, nullable workspace ID,
-nullable session ID, event name and consent state. Optional fields include
+nullable session ID, event name and consent state. Normalized event IDs are namespaced by provider to prevent cross-provider collisions. Optional fields include
 landing/referrer URLs, user agent, campaign tags, monetary value and ISO 4217
 currency code.
 
@@ -89,7 +89,9 @@ No raw IP address is included in this initial contract. Do not add it by default
   Contracts are added; no GA4 network connector or OAuth flow is implemented.
 - **A3 — Conversion and revenue normalization:** confirmed/pending/reversed
   conversion normalization, duplicate guards, currency-separated aggregation,
-  and explicit source-event membership for attribution. Pure functions are added.
+  explicit source-event membership, and provider-ID namespacing. Pure functions are added.
+- **Sessionization:** supplied session IDs are grouped without inventing sessions;
+  crawler-marked sessions are excluded from human session counts.
 - **A4 — MAAROOF integration:** a workspace-scoped report projection is added,
   but it is not yet wired into existing reports or UI.
 - **A5 — Verification:** fixtures are added; actual test execution, tenant
@@ -102,6 +104,8 @@ No raw IP address is included in this initial contract. Do not add it by default
 - GA4 aggregate rows can be normalized from supplied data, but no Google Analytics
   API client, OAuth authorization, property discovery or pagination is implemented.
 - No CRM connector, UI, report widget, scheduled job or new MAAROOF tool is wired.
+- Session totals depend on source-provided session IDs; missing IDs are counted as
+  ungrouped events rather than converted into inferred sessions.
 - The report projection only attributes conversions to explicitly listed source
   event IDs; it does not infer a journey from every event in the workspace.
 - The AI platform host registry is intentionally finite and cannot identify
