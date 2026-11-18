@@ -7,8 +7,6 @@ const rows: Ga4RowMapping[] = [{
   sessionSource: "chatgpt.com",
   sessionMedium: "referral",
   sessionCampaignName: "(not set)",
-  pageReferrer: "https://chatgpt.com/",
-  landingPage: "/",
   sessions: 8,
   keyEvents: 2,
   totalRevenue: 120,
