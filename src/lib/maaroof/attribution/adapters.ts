@@ -143,6 +143,7 @@ export function normalizeExternalTrafficRecord(input: unknown): {
       event: eventParsed.data,
       classification: classifyTrafficSource({
         referrerUrl: record.referrerUrl,
+        landingUrl: record.landingUrl,
         userAgent: record.userAgent,
         utmSource: record.source,
         utmMedium: record.medium,
