@@ -1,8 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { TOOL_OPTIONS } from "./tool-options";
-import { coerceToolInput } from "./tool-input-validation";
+import { coerceToolInput, normalizeToolInput } from "./tool-input-validation";
 
 describe("typed tool input normalization", () => {
+  it("uses per-tool types when a shared field has different endpoint shapes", () => {
+    const feasibility = normalizeToolInput("feasibility", {
+      competitors: ["Alpha", "Beta"],
+      budget_iqd: 125000,
+    });
+    expect(feasibility).toEqual({ competitors: "Alpha, Beta", budget_iqd: 125000 });
+
+    const compare = normalizeToolInput("compare", { competitors: "Alpha\\nBeta" });
+    expect(compare).toEqual({ competitors: ["Alpha", "Beta"] });
+
+    const bizdev = normalizeToolInput("bizdev", { goals: ["retain customers", "grow revenue"] });
+    expect(bizdev).toEqual({ goals: "retain customers, grow revenue" });
+  });
+
   it("coerces explicitly typed numeric, boolean, and list fields", () => {
     expect(coerceToolInput("keyword_intelligence", {
       live_search: "false",
