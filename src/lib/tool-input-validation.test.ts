@@ -45,6 +45,18 @@ describe("typed tool input normalization", () => {
     });
   });
 
+  it("preserves structured objects only for fields declared as objects", () => {
+    const structured = { region: "MENA", horizon: 12 };
+    expect(coerceToolInput("what_if", { changes: structured, axes: structured })).toEqual({
+      input: { changes: structured, axes: structured },
+      issues: [],
+    });
+    expect(coerceToolInput("what_if", { changes: "not-an-object" })).toEqual({
+      input: {},
+      issues: [{ field: "changes", expected: "object" }],
+    });
+  });
+
   it("keeps field type declarations within known tool input layers", () => {
     for (const [tool, options] of Object.entries(TOOL_OPTIONS)) {
       const known = new Set([
