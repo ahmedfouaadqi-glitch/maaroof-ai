@@ -14,8 +14,13 @@ export const AttributionWorkspaceScopeSchema = z.object({
 }).strict();
 export type AttributionWorkspaceScope = z.infer<typeof AttributionWorkspaceScopeSchema>;
 
+export type GrantedWorkspaceAttributionEvent = Omit<AttributionEvent, "workspaceId" | "consent"> & {
+  workspaceId: string;
+  consent: "granted";
+};
+
 export type WorkspaceScopeValidation =
-  | { success: true; scope: AttributionWorkspaceScope; events: AttributionEvent[] }
+  | { success: true; scope: AttributionWorkspaceScope; events: GrantedWorkspaceAttributionEvent[] }
   | { success: false; issues: string[] };
 
 /** Prevents null, cross-workspace or malformed events from entering a tenant write. */
@@ -32,7 +37,7 @@ export function validateWorkspaceEventBatch(
   }
 
   const issues: string[] = [];
-  const events: AttributionEvent[] = [];
+  const events: GrantedWorkspaceAttributionEvent[] = [];
   for (let index = 0; index < eventsInput.length; index += 1) {
     const event = eventsInput[index];
     if (!event || typeof event !== "object" || (event as any).workspaceId !== scopeParsed.data.workspaceId) {
@@ -48,7 +53,7 @@ export function validateWorkspaceEventBatch(
       issues.push(`events[${index}].consent: consent_not_granted`);
       continue;
     }
-    events.push(parsed.data as AttributionEvent);
+    events.push(parsed.data as GrantedWorkspaceAttributionEvent);
   }
 
   return issues.length
@@ -87,7 +92,7 @@ export type AttributionEventQuery = {
 export interface AttributionRepository {
   appendEvents(
     scope: AttributionWorkspaceScope,
-    events: AttributionEvent[],
+    events: GrantedWorkspaceAttributionEvent[],
   ): Promise<{ inserted: number; duplicates: number }>;
 
   listEvents(
