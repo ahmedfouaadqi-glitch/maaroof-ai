@@ -1,4 +1,4 @@
-import { TOOL_CATALOG, type ToolKey } from "@/lib/tool-catalog";
+import { TOOL_CATALOG, type ToolDef, type ToolKey } from "@/lib/tool-catalog";
 import { TOOL_OPTIONS, type ToolOptions } from "@/lib/tool-options";
 
 /**
@@ -11,6 +11,19 @@ export type ToolExecutionKind = "api" | "internal" | "coordinator" | "agent_only
 export type ToolAvailability = "active" | "paused" | "special";
 export type ToolAuthorizationOwner = "route" | "orchestrator" | "none";
 export type ToolBillingOwner = "route" | "orchestrator" | "none";
+export type ToolCatalogMetadata = {
+  labels: ToolDef["labels"];
+  summary: string | null;
+  /** Existing task/analysis units per run, not a monetary price. */
+  costPerRun: number;
+  costProfile: ToolDef["costProfile"] | null;
+  riskLevel: ToolDef["riskLevel"] | null;
+  capabilities: NonNullable<ToolDef["capabilities"]>;
+  strengths: string[];
+  weaknesses: string[];
+  requiredPolicies: string[];
+  requiredKnowledge: string[];
+};
 export type ToolOutputContract = {
   /** known uses a successful SSE result event; errors are still JSON. */
   transport: "json" | "sse" | "internal";
@@ -53,6 +66,7 @@ const INTERNAL_OUTPUTS: Partial<Record<ToolKey, ToolOutputContract>> = {
 
 export type ToolExecutionContract = {
   key: ToolKey;
+  catalog: ToolCatalogMetadata | null;
   execution: ToolExecutionKind;
   availability: ToolAvailability;
   /** POST API path for sub-tool dispatch. Null for internal/special keys. */
@@ -98,6 +112,19 @@ export const TOOL_PATH_ALIASES: Record<string, ToolKey> = {
 };
 
 function buildContract(key: ToolKey): ToolExecutionContract {
+  const definition = TOOL_CATALOG.find((tool) => tool.key === key);
+  const catalog: ToolCatalogMetadata | null = definition ? {
+    labels: definition.labels,
+    summary: definition.dna || null,
+    costPerRun: definition.costPerRun,
+    costProfile: definition.costProfile || null,
+    riskLevel: definition.riskLevel || null,
+    capabilities: definition.capabilities || [],
+    strengths: definition.strengths || [],
+    weaknesses: definition.weaknesses || [],
+    requiredPolicies: definition.requiredPolicies || [],
+    requiredKnowledge: definition.requiredKnowledge || [],
+  } : null;
   const path = API_PATHS[key] || null;
   const execution: ToolExecutionKind = path
     ? "api"
@@ -114,6 +141,7 @@ function buildContract(key: ToolKey): ToolExecutionContract {
   const plannerSelectable = availability === "active" && (execution === "api" || execution === "internal");
   return {
     key,
+    catalog,
     execution,
     availability,
     path,
