@@ -160,7 +160,9 @@ export function classifyTrafficSource(input: {
   }
 
   if (utmSource) {
-    if (utmMedium === "organic") {\n      return { channel: "organic_search", source: utmSource, medium: "organic", confidence: "medium", evidence: "utm", reason: "Client-supplied organic search campaign tagging." };\n    }\n    if (/^(cpc|ppc|paidsearch|paid-search)$/.test(utmMedium)) {
+    if (utmMedium === "organic") {
+      return { channel: "organic_search", source: utmSource, medium: "organic", confidence: "medium", evidence: "utm", reason: "Client-supplied organic search campaign tagging." };
+    }\n    if (/^(cpc|ppc|paidsearch|paid-search)$/.test(utmMedium)) {
       return { channel: "paid_search", source: utmSource, medium: utmMedium, confidence: "medium", evidence: "utm", reason: "Client-supplied paid-search campaign tagging." };
     }
     if (/^(email|e-mail)$/.test(utmMedium)) {
@@ -256,9 +258,9 @@ export function attributeConversion(
     weights = eligible.map(() => 1 / eligible.length);
   } else {
     const halfLifeDays = Math.max(0.01, options.halfLifeDays ?? 7);
-    const conversionTime = Date.parse(conversion.occurredAt);
+    const latestTouchTime = Date.parse(eligible[eligible.length - 1].occurredAt);
     weights = eligible.map((touch) => {
-      const ageDays = Math.max(0, (conversionTime - Date.parse(touch.occurredAt)) / 86_400_000);
+      const ageDays = Math.max(0, (latestTouchTime - Date.parse(touch.occurredAt)) / 86_400_000);
       return Math.pow(0.5, ageDays / halfLifeDays);
     });
     const total = weights.reduce((sum, weight) => sum + weight, 0);
