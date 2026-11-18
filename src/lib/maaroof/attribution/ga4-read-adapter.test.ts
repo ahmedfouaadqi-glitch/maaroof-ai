@@ -74,6 +74,21 @@ describe("readGa4AttributionReport", () => {
     expect(result.warnings.some((warning) => warning.includes("pagination limit"))).toBe(true);
   });
 
+  it("does not report pagination truncation when a returned row is malformed", async () => {
+    const malformed = { dimensionValues: [], metricValues: [] };
+    const fetchImpl = vi.fn().mockResolvedValue(response([malformed], 1));
+    const result = await readGa4AttributionReport({
+      propertyId: "123456789",
+      accessToken: "token",
+      startDate: "2026-01-01",
+      endDate: "2026-01-31",
+      fetchImpl,
+    });
+    expect(result.rows).toHaveLength(0);
+    expect(result.warnings.some((warning) => warning.includes("pagination limit"))).toBe(false);
+    expect(result.warnings.some((warning) => warning.includes("row did not match"))).toBe(true);
+  });
+
   it("rejects invalid property IDs and date ranges before making a request", async () => {
     const fetchImpl = vi.fn();
     await expect(readGa4AttributionReport({
