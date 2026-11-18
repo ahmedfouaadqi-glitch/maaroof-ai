@@ -261,8 +261,12 @@ export type RevenueSummary = {
   reversedConversions: number;
 };
 
-function currencyFractionDigits(currency: string): number {
-  return new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits;
+function currencyFractionDigits(currency: string): number | null {
+  try {
+    return new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits;
+  } catch {
+    return null;
+  }
 }
 
 export function aggregateRevenue(inputs: unknown[]): {
@@ -287,6 +291,11 @@ export function aggregateRevenue(inputs: unknown[]): {
     }
 
     const conversion = parsed.data;
+    const fractionDigits = currencyFractionDigits(conversion.currency);
+    if (fractionDigits == null) {
+      rejected.push({ externalId: conversion.conversionId, code: "invalid_currency", message: "Currency code is not supported by the runtime currency registry." });
+      continue;
+    }
     const dedupeKey = conversion.workspaceId + ":" + conversion.conversionId;
     if (seen.has(dedupeKey)) {
       duplicateConversionIds.push(dedupeKey);
@@ -301,7 +310,7 @@ export function aggregateRevenue(inputs: unknown[]): {
       confirmedConversions: 0,
       confirmedRevenue: 0,
       confirmedRevenueMinor: 0,
-      currencyFractionDigits: currencyFractionDigits(conversion.currency),
+      currencyFractionDigits: fractionDigits,
       pendingConversions: 0,
       reversedConversions: 0,
     };
@@ -315,8 +324,13 @@ export function aggregateRevenue(inputs: unknown[]): {
     }
 
     if (conversion.status === "confirmed") {
+      const nextTotalMinor = summary.confirmedRevenueMinor + minorUnits;
+      if (!Number.isSafeInteger(nextTotalMinor)) {
+        rejected.push({ externalId: conversion.conversionId, code: "invalid_record", message: "Aggregated revenue exceeds safe integer limits." });
+        continue;
+      }
       summary.confirmedConversions += 1;
-      summary.confirmedRevenueMinor += minorUnits;
+      summary.confirmedRevenueMinor = nextTotalMinor;
       summary.confirmedRevenue = summary.confirmedRevenueMinor / scale;
     } else if (conversion.status === "pending") {
       summary.pendingConversions += 1;
