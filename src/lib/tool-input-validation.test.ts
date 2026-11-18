@@ -7,7 +7,7 @@ describe("typed tool input normalization", () => {
     expect(coerceToolInput("keyword_intelligence", {
       live_search: "false",
       live_search_limit: "45",
-      markets: "Iraq, UAE",
+      markets: "Iraq\nUAE",
       request_text: "keep this undeclared field",
     })).toEqual({
       input: {
