@@ -9,6 +9,8 @@ import { TOOL_OPTIONS, type ToolOptions } from "@/lib/tool-options";
  */
 export type ToolExecutionKind = "api" | "internal" | "coordinator" | "agent_only";
 export type ToolAvailability = "active" | "paused" | "special";
+export type ToolAuthorizationOwner = "route" | "orchestrator" | "none";
+export type ToolBillingOwner = "route" | "orchestrator" | "none";
 export type ToolOutputContract = {
   /** known uses a successful SSE result event; errors are still JSON. */
   transport: "json" | "sse" | "internal";
@@ -59,6 +61,10 @@ export type ToolExecutionContract = {
   entryPath: string | null;
   plannerSelectable: boolean;
   skillExecutable: boolean;
+  /** Existing auth boundary; this registry does not bypass or reimplement it. */
+  authorizationOwner: ToolAuthorizationOwner;
+  /** Billing responsibility remains with the existing route/orchestrator implementation. */
+  billingOwner: ToolBillingOwner;
   options: ToolOptions | null;
   output: ToolOutputContract | null;
 };
@@ -114,6 +120,10 @@ function buildContract(key: ToolKey): ToolExecutionContract {
     entryPath: key === "maaroof" ? "/api/maaroof" : null,
     plannerSelectable,
     skillExecutable: plannerSelectable,
+    authorizationOwner: execution === "api" ? "route" : execution === "agent_only" ? "none" : "orchestrator",
+    billingOwner: availability === "paused" || execution === "agent_only" || key === "teach_space"
+      ? "none"
+      : execution === "api" ? "route" : "orchestrator",
     options: TOOL_OPTIONS[key] || INTERNAL_OPTIONS[key] || null,
     output: API_OUTPUTS[key] || INTERNAL_OUTPUTS[key] || null,
   };
