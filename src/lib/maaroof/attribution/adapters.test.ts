@@ -134,7 +134,10 @@ describe("aggregateRevenue", () => {
     ]);
     expect(result.summaries[0].confirmedRevenue).toBe(100);
     expect(result.summaries[0].pendingConversions).toBe(1);
+    expect(result.summaries[0].pendingRevenue).toBe(100);
     expect(result.summaries[0].reversedConversions).toBe(1);
+    expect(result.summaries[0].reversedRevenue).toBe(100);
+    expect(result.summaries[0].confirmedRevenue).toBe(100);
   });
 });
 
