@@ -127,6 +127,7 @@ function isAiLabel(value?: string): boolean {
  */
 export function classifyTrafficSource(input: {
   referrerUrl?: string | null;
+  landingUrl?: string | null;
   userAgent?: string | null;
   utmSource?: string | null;
   utmMedium?: string | null;
@@ -142,6 +143,12 @@ export function classifyTrafficSource(input: {
 
   const utmSource = normalizedTag(input.utmSource || undefined);
   const utmMedium = normalizedTag(input.utmMedium || undefined);
+  if (utmSource === "direct" || (utmMedium === "none" && utmSource !== "notset")) {
+    return { channel: "direct", source: "(direct)", medium: "(none)", confidence: "medium", evidence: "utm", reason: "Analytics source fields explicitly identify direct traffic." };
+  }
+  if (utmSource === "notset" || utmMedium === "notset") {
+    return { channel: "unknown", source: null, medium: null, confidence: "low", evidence: "insufficient", reason: "Analytics provider marked source or medium as not set." };
+  }
   if (utmSource && isAiLabel(utmSource)) {
     return {
       channel: "ai_referral", source: utmSource, medium: utmMedium || "referral",
@@ -151,6 +158,10 @@ export function classifyTrafficSource(input: {
   }
 
   const host = safeHostname(input.referrerUrl || undefined);
+  const landingHost = safeHostname(input.landingUrl || undefined);
+  if (host && landingHost && host === landingHost) {
+    return { channel: "direct", source: "(same-site)", medium: "internal", confidence: "medium", evidence: "referrer", reason: "Same-host navigation referrer is not treated as a new acquisition source." };
+  }
   if (host && hostMatches(host, AI_REFERRER_HOSTS)) {
     return {
       channel: "ai_referral", source: host, medium: "referral",
