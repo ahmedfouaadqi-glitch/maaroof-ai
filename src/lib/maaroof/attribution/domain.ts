@@ -224,6 +224,7 @@ export function attributeConversion(
   const eligible = touchpoints
     .filter((touch) =>
       touch.workspaceId === conversion.workspaceId
+      && touch.channel !== "crawler"
       && Number.isFinite(Date.parse(touch.occurredAt))
       && Date.parse(touch.occurredAt) <= Date.parse(conversion.occurredAt),
     )
