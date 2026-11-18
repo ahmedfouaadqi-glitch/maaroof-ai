@@ -25,6 +25,18 @@ describe("canonical tool execution contracts", () => {
     expect([...getApiToolPaths()].sort()).toEqual([...DIRECT_DISPATCH_PATHS].sort());
   });
 
+  it("records authorization and billing ownership without duplicating route policy", () => {
+    for (const contract of Object.values(TOOL_CONTRACTS).filter((item) => item.execution === "api" && item.availability === "active")) {
+      expect(contract.authorizationOwner, contract.key).toBe("route");
+      expect(contract.billingOwner, contract.key).toBe("route");
+    }
+    expect(TOOL_CONTRACTS.translate.authorizationOwner).toBe("orchestrator");
+    expect(TOOL_CONTRACTS.translate.billingOwner).toBe("orchestrator");
+    expect(TOOL_CONTRACTS.teach_space.billingOwner).toBe("none");
+    expect(TOOL_CONTRACTS.maaroof.authorizationOwner).toBe("orchestrator");
+    expect(TOOL_CONTRACTS.competitor_monitor.billingOwner).toBe("none");
+  });
+
   it("defines an observed output envelope for every API contract", () => {
     for (const contract of Object.values(TOOL_CONTRACTS).filter((item) => item.execution === "api")) {
       expect(contract.output, contract.key).not.toBeNull();
