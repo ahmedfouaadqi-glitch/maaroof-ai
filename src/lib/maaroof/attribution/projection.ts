@@ -1,7 +1,6 @@
 import {
   attributeConversion,
   type AttributionModel,
-  type AttributionCredit,
   type Conversion,
   type Touchpoint,
   type TrafficChannel,
