@@ -38,6 +38,20 @@ describe("canonical tool execution contracts", () => {
     expect(TOOL_CONTRACTS.competitor_monitor.output?.successKind).toBe("paused_response");
   });
 
+  it("documents outputs for internal skill-executable tools", () => {
+    expect(TOOL_CONTRACTS.translate.output).toMatchObject({
+      transport: "internal",
+      successFields: ["target_lang", "text", "charged"],
+    });
+    expect(TOOL_CONTRACTS.teach_space.output).toMatchObject({
+      transport: "internal",
+      successFields: ["saved_facts"],
+    });
+    for (const contract of Object.values(TOOL_CONTRACTS).filter((item) => item.skillExecutable)) {
+      expect(contract.output, contract.key).not.toBeNull();
+    }
+  });
+
   it("keeps special execution modes out of ordinary plan steps", () => {
     const selectable = getPlannerSelectableToolKeys();
     expect(selectable).toContain("translate");
