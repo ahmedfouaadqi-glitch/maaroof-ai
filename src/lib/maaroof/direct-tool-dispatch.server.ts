@@ -37,6 +37,9 @@ const ROUTE_LOADERS: Record<string, () => Promise<unknown>> = {
   "/api/dual-result": () => import("@/routes/api/dual-result"),
 };
 
+/** Exported for contract parity tests; the route loader registry remains server-only. */
+export const DIRECT_DISPATCH_PATHS = Object.freeze(Object.keys(ROUTE_LOADERS));
+
 export function resolveDirectPostHandler(routeLike: unknown): Handler | null {
   const route = routeLike as any;
   const server = route?.Route?.options?.server ?? route?.options?.server;
