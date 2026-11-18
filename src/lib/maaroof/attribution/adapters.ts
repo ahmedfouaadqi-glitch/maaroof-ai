@@ -261,7 +261,11 @@ export type RevenueSummary = {
   reversedConversions: number;
 };
 
-function currencyFractionDigits(currency: string): number {\n  return new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits;\n}\n\nexport function aggregateRevenue(inputs: unknown[]): {
+function currencyFractionDigits(currency: string): number {
+  return new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits;
+}
+
+export function aggregateRevenue(inputs: unknown[]): {
   summaries: RevenueSummary[];
   rejected: AdapterIssue[];
   duplicateConversionIds: string[];
@@ -305,7 +309,12 @@ function currencyFractionDigits(currency: string): number {\n  return new Intl.N
     const scale = 10 ** summary.currencyFractionDigits;
     const scaledValue = conversion.value * scale;
     const minorUnits = Math.round(scaledValue);
-    if (!Number.isSafeInteger(minorUnits) || Math.abs(scaledValue - minorUnits) > 1e-7) {\n      rejected.push({ externalId: conversion.conversionId, code: "invalid_record", message: "Revenue value exceeds currency precision or safe integer limits." });\n      continue;\n    }\n\n    if (conversion.status === "confirmed") {
+    if (!Number.isSafeInteger(minorUnits) || Math.abs(scaledValue - minorUnits) > 1e-7) {
+      rejected.push({ externalId: conversion.conversionId, code: "invalid_record", message: "Revenue value exceeds currency precision or safe integer limits." });
+      continue;
+    }
+
+    if (conversion.status === "confirmed") {
       summary.confirmedConversions += 1;
       summary.confirmedRevenueMinor += minorUnits;
       summary.confirmedRevenue = summary.confirmedRevenueMinor / scale;
