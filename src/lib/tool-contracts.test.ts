@@ -25,6 +25,17 @@ describe("canonical tool execution contracts", () => {
     expect([...getApiToolPaths()].sort()).toEqual([...DIRECT_DISPATCH_PATHS].sort());
   });
 
+  it("carries existing catalog labels, risk, capabilities, and unit cost metadata", () => {
+    for (const contract of Object.values(TOOL_CONTRACTS)) {
+      expect(contract.catalog, contract.key).not.toBeNull();
+      expect(contract.catalog?.labels.en, contract.key).toBeTruthy();
+      expect(Number.isFinite(contract.catalog?.costPerRun), contract.key).toBe(true);
+      expect(contract.catalog?.costPerRun, contract.key).toBeGreaterThanOrEqual(0);
+      expect("preferredModels" in (contract.catalog as object), contract.key).toBe(false);
+    }
+    expect(TOOL_CONTRACTS.analyze.catalog?.costProfile).toBe("light");
+  });
+
   it("records authorization and billing ownership without duplicating route policy", () => {
     for (const contract of Object.values(TOOL_CONTRACTS).filter((item) => item.execution === "api" && item.availability === "active")) {
       expect(contract.authorizationOwner, contract.key).toBe("route");
