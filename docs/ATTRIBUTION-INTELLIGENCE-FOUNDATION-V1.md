@@ -84,21 +84,26 @@ No raw IP address is included in this initial contract. Do not add it by default
 - **A0 — Audit and contract:** map endpoint/auth/workspace/report boundaries.
 - **A1 — Pure domain core:** source classification, event validation and
   deterministic attribution models. Added in this branch.
-- **A2 — Adapter contracts:** GA4 read adapter and optional first-party event
-  adapter, without credentials embedded in source.
-- **A3 — Conversion and revenue normalization:** deduplicated lead/conversion
-  events and currency-safe revenue handling.
-- **A4 — MAAROOF integration:** read-only report projection and explicit evidence
-  labels; no change to existing visibility calculations.
-- **A5 — Verification:** fixtures, tenant isolation tests, privacy tests,
-  integration tests and build/lint.
+- **A2 — Adapter contracts:** provider normalization, explicit-consent gate for
+  event-level records, in-batch deduplication, and GA4 aggregate-row mapping.
+  Contracts are added; no GA4 network connector or OAuth flow is implemented.
+- **A3 — Conversion and revenue normalization:** confirmed/pending/reversed
+  conversion normalization, duplicate guards, currency-separated aggregation,
+  and explicit source-event membership for attribution. Pure functions are added.
+- **A4 — MAAROOF integration:** a workspace-scoped report projection is added,
+  but it is not yet wired into existing reports or UI.
+- **A5 — Verification:** fixtures are added; actual test execution, tenant
+  integration tests, privacy tests, lint and build remain outstanding.
 
 ## Current limitations
 
 - This is a domain foundation, not a live analytics feature.
 - No events are being collected or stored.
-- No Google Analytics or CRM connector is implemented.
-- No UI, report widget, scheduled job or new MAAROOF tool is wired.
+- GA4 aggregate rows can be normalized from supplied data, but no Google Analytics
+  API client, OAuth authorization, property discovery or pagination is implemented.
+- No CRM connector, UI, report widget, scheduled job or new MAAROOF tool is wired.
+- The report projection only attributes conversions to explicitly listed source
+  event IDs; it does not infer a journey from every event in the workspace.
 - The AI platform host registry is intentionally finite and cannot identify
   traffic when browsers strip referrers or tracking parameters.
 - The current time-decay model is a transparent rule, not a learned model.
