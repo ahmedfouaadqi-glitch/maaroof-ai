@@ -27,6 +27,14 @@ describe("classifyTrafficSource", () => {
     expect(classifyTrafficSource({ userAgent: "Mozilla/5.0 GPTBot/1.0" }).channel).toBe("crawler");
   });
 
+  it("classifies explicitly tagged organic search correctly", () => {
+    expect(classifyTrafficSource({ utmSource: "google", utmMedium: "organic" }).channel).toBe("organic_search");
+  });
+
+  it("does not classify an unrelated user-agent containing the letters bot as a crawler", () => {
+    expect(classifyTrafficSource({ userAgent: "Mozilla/5.0 (compatible; ExampleBrowser/1.0)" }).channel).toBe("direct");
+  });
+
   it("recognizes organic search referrers", () => {
     expect(classifyTrafficSource({ referrerUrl: "https://www.google.com/search?q=brand" }).channel).toBe("organic_search");
   });
@@ -68,6 +76,16 @@ describe("attributeConversion", () => {
       { eventId: "direct", workspaceId: conversion.workspaceId, occurredAt: "2026-01-02T18:00:00.000Z", channel: "direct", source: "(direct)" },
     ];
     expect(attributeConversion(conversion, withDirect, "last_non_direct").credits[0].eventId).toBe("b");
+  });
+
+  it("keeps time-decay weights finite for very old touchpoints", () => {
+    const oldTouches: Touchpoint[] = [
+      { eventId: "old", workspaceId: conversion.workspaceId, occurredAt: "1900-01-01T00:00:00.000Z", channel: "organic_search", source: "google.com" },
+      { eventId: "recent", workspaceId: conversion.workspaceId, occurredAt: "2026-01-02T00:00:00.000Z", channel: "ai_referral", source: "chatgpt.com" },
+    ];
+    const credits = attributeConversion(conversion, oldTouches, "time_decay").credits;
+    expect(credits.every((item) => Number.isFinite(item.credit))).toBe(true);
+    expect(credits.reduce((sum, item) => sum + item.credit, 0)).toBeCloseTo(1, 10);
   });
 
   it("normalizes linear and time-decay weights to one", () => {
