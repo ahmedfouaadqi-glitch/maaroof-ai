@@ -22,7 +22,6 @@ export type AttributionProjectionInput = {
 export type ChannelAttributionRow = {
   channel: TrafficChannel;
   source: string | null;
-  attributedConversions: number;
   conversionCredit: number;
   attributedRevenue: number;
   currency: string;
@@ -111,6 +110,7 @@ export function buildAttributionProjection(
       } satisfies Conversion,
       touchpoints,
       input.model,
+      { eligibleEventIds: conversion.sourceEventIds },
     );
 
     if (result.unattributed) {
@@ -162,7 +162,6 @@ export function buildAttributionProjection(
     channelAttribution: [...buckets.values()].map((bucket) => ({
       channel: bucket.channel,
       source: bucket.source,
-      attributedConversions: bucket.conversionCredit,
       conversionCredit: bucket.conversionCredit,
       attributedRevenue: bucket.attributedRevenue,
       currency: bucket.currency,
