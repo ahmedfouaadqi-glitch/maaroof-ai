@@ -3,6 +3,8 @@
 // context, detect fields still missing (ask instead of failing), and turn raw
 // reflection output into a plain sentence. No I/O — safe to unit-test.
 
+import { TOOL_OPTIONS } from "@/lib/tool-options";
+
 export type EntityContext = {
   /** Brand explicitly named in the user's goal (highest priority). */
   goalBrand?: string | null;
@@ -11,30 +13,12 @@ export type EntityContext = {
   goal?: string;
 };
 
-/** The brand key(s) each tool endpoint actually reads. */
-const BRAND_KEYS: Record<string, string[]> = {
-  visibility: ["brand"],
-  compare: ["brand"],
-  known: ["brand"],
-  geo_strategist: ["brand"],
-  social_analysis: ["brand"],
-  what_if: ["brand"],
-  brand_boost: ["brand_name"],
-  brand_authority: ["brand_name"],
-  applied_ranking: ["brand_name"],
-  keyword_intelligence: ["brand"],
-  company_email: ["company"],
-  bizdev: ["business_name"],
-  feasibility: ["project_name"],
-};
-
-/** Fields a tool rejects with 400 when empty. */
-export const REQUIRED_FIELDS: Record<string, string[]> = {
-  ...BRAND_KEYS,
-  research: ["query"],
-  suggest: ["description"],
-  geo_rewrite: ["text"],
-};
+/** Backward-compatible view of required fields, derived from tool metadata. */
+export const REQUIRED_FIELDS: Record<string, string[]> = Object.fromEntries(
+  Object.entries(TOOL_OPTIONS)
+    .filter(([, options]) => options.requiredFields?.length)
+    .map(([tool, options]) => [tool, options.requiredFields || []]),
+);
 
 const ANY_BRAND = ["brand", "brand_name", "company", "business_name", "project_name"];
 
@@ -135,7 +119,8 @@ export function fillToolInput(tool: string, input: any, ctx: EntityContext): Rec
   const out: Record<string, any> = input && typeof input === "object" && !Array.isArray(input) ? { ...input } : {};
   const fromInput = ANY_BRAND.map((k) => str(out[k])).find(Boolean);
   const brand = fromInput || str(ctx.goalBrand) || str(ctx.workspace?.name) || str(ctx.profile?.brand_name);
-  for (const k of BRAND_KEYS[tool] || []) if (!str(out[k]) && brand) out[k] = brand;
+  const brandField = TOOL_OPTIONS[tool]?.brandField;
+  if (brandField && !str(out[brandField]) && brand) out[brandField] = brand;
   if (!str(out.keywords)) {
     const kw = str(ctx.workspace?.keywords) || str(ctx.profile?.brand_keywords);
     if (kw) out.keywords = kw;
