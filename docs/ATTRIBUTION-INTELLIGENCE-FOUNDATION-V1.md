@@ -89,8 +89,8 @@ No raw IP address is included in this initial contract. Do not add it by default
 - **A2 — Adapter contracts:** provider normalization, explicit-consent gate for
   event-level records, in-batch deduplication, and GA4 aggregate-row mapping.
   A read-only GA4 Data API reader with pagination and a session-source aggregate
-  projection/export are added; OAuth authorization, token refresh, property
-  discovery and application wiring are not implemented.
+  projection/export are added. The reader requires the `analytics.readonly`
+  OAuth scope; token acquisition/refresh, property discovery and app wiring are not implemented.
 - **A3 — Conversion and revenue normalization:** confirmed/pending/reversed
   conversion normalization, duplicate guards, currency-separated aggregation,
   explicit source-event membership, and provider-ID namespacing. Pure functions are added.
