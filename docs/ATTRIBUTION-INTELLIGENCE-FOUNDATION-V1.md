@@ -61,7 +61,7 @@ conversion timestamp. Crawler touchpoints are excluded.
 The event schema requires an event ID, timestamp, nullable workspace ID,
 nullable session ID, event name and consent state. Normalized event IDs are namespaced by provider to prevent cross-provider collisions. Optional fields include
 landing/referrer URLs, user agent, campaign tags, monetary value and ISO 4217
-currency code.
+three-letter currency code; currency precision is applied using the runtime's currency metadata.
 
 The schema is intentionally strict. An adapter must validate and normalize its
 input before passing events to the domain core. The current foundation does not
