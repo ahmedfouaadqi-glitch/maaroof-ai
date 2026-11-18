@@ -33,6 +33,14 @@ describe("summarizeSessions", () => {
     expect(summary.eventsWithoutSessionId).toBe(0);
   });
 
+  it("does not collide session IDs across analytics providers", () => {
+    const summary = summarizeSessions([
+      normalized({ provider: "first_party", sessionId: "shared-id" }),
+      normalized({ provider: "manual", sessionId: "shared-id", externalId: "manual-event" }),
+    ], workspaceId);
+    expect(summary.humanSessions).toBe(2);
+  });
+
   it("does not count sessions without explicit session IDs", () => {
     const summary = summarizeSessions([
       normalized({ sessionId: null }),
