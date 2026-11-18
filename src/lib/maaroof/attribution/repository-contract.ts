@@ -48,10 +48,6 @@ export function validateWorkspaceEventBatch(
       issues.push(`events[${index}].consent: consent_not_granted`);
       continue;
     }
-    if ((parsed.data.value === undefined) !== (parsed.data.currency === undefined)) {
-      issues.push(`events[${index}].currency: value_and_currency_must_be_supplied_together`);
-      continue;
-    }
     events.push(parsed.data as AttributionEvent);
   }
 
