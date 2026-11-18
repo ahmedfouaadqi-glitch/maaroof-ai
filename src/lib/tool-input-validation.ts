@@ -121,7 +121,7 @@ export function coerceToolInput(
       case "string": {
         const text = toText(value);
         normalized = field === "competitors"
-          ? text.split(/[\\n,؛;|]+/).map((item) => item.trim()).filter((item) => !isPlaceholderName(item)).join(", ")
+          ? text.split(/[\n,؛;|]+/).map((item) => item.trim()).filter((item) => !isPlaceholderName(item)).join(", ")
           : text;
         valid = Boolean(normalized);
         break;
