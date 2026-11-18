@@ -57,6 +57,11 @@ describe("typed tool input normalization", () => {
       input: {},
       issues: [{ field: "platforms", expected: "string[]" }],
     });
+    const invalidItems = coerceToolInput("brand_boost", normalizeToolInput("brand_boost", { platforms: [{ bad: true }] }));
+    expect(invalidItems).toEqual({
+      input: {},
+      issues: [{ field: "platforms", expected: "string[]" }],
+    });
   });
 
   it("preserves false and zero as valid values", () => {
