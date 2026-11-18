@@ -267,6 +267,7 @@ export function taskEntity(results: StepResult[]): { brand: string; url?: string
 export function taskEntityInput(tool: string, input: any, results: StepResult[]): Record<string, any> {
   const out: Record<string, any> = input && typeof input === "object" && !Array.isArray(input) ? { ...input } : {};
   const e = taskEntity(results);
-  if (e?.url && !str(out.url) && ["analyze", "known", "brand_authority", "social_analysis", "brand_boost", "keyword_intelligence"].includes(tool)) out.url = e.url;
+  if (e?.url && tool === "keyword_intelligence" && !str(out.site)) out.site = e.url;
+  if (e?.url && !str(out.url) && ["analyze", "known", "brand_authority", "social_analysis", "brand_boost"].includes(tool)) out.url = e.url;
   return out;
 }
