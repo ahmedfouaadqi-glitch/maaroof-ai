@@ -8,7 +8,7 @@ export type SessionChannelCount = {
 
 export type SessionSummary = {
   workspaceId: string;
-  humanSessions: number;
+  nonCrawlerSessions: number;
   aiReferralSessions: number;
   crawlerSessions: number;
   eventsWithoutSessionId: number;
@@ -42,7 +42,7 @@ export function summarizeSessions(
   }
 
   const channelCounts = new Map<TrafficChannel, number>();
-  let humanSessions = 0;
+  let nonCrawlerSessions = 0;
   let aiReferralSessions = 0;
   let crawlerSessions = 0;
 
@@ -57,7 +57,7 @@ export function summarizeSessions(
     }
 
     const sessionChannel = ordered[0].classification.channel;
-    humanSessions += 1;
+    nonCrawlerSessions += 1;
     if (sessionChannel === "ai_referral") aiReferralSessions += 1;
     channelCounts.set(sessionChannel, (channelCounts.get(sessionChannel) || 0) + 1);
   }
@@ -65,7 +65,7 @@ export function summarizeSessions(
   const limitations = [
     "Session totals use provider-supplied session IDs; no inactivity-based sessionization is performed.",
     "Events without a session ID are excluded from session totals.",
-    "A session containing any crawler-marker event is excluded from human sessions; user-agent identification is provisional.",
+    "A session containing any crawler-marker event is excluded from non-crawler sessions; user-agent identification is provisional.",
     "The earliest event's source classification is used as the session source; this is not a causal attribution model.",
   ];
 
@@ -73,7 +73,7 @@ export function summarizeSessions(
 
   return {
     workspaceId,
-    humanSessions,
+    nonCrawlerSessions,
     aiReferralSessions,
     crawlerSessions,
     eventsWithoutSessionId,
