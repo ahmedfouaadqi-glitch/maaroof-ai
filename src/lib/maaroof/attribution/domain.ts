@@ -75,6 +75,8 @@ const AI_REFERRER_HOSTS = new Set([
   "mistral.ai",
   "kimi.com",
   "qwen.ai",
+  "grok.com",
+  "x.ai",
 ]);
 
 const SEARCH_HOSTS = new Set([
@@ -143,7 +145,7 @@ export function classifyTrafficSource(input: {
 
   const utmSource = normalizedTag(input.utmSource || undefined);
   const utmMedium = normalizedTag(input.utmMedium || undefined);
-  if (utmSource === "direct" || (!utmSource && utmMedium === "none")) {
+  if (utmSource === "direct" || (!utmSource && utmMedium === "none" && !input.referrerUrl)) {
     return { channel: "direct", source: "(direct)", medium: "(none)", confidence: "medium", evidence: "utm", reason: "Analytics source fields explicitly identify direct traffic." };
   }
   if (utmSource === "notset" || utmMedium === "notset") {
