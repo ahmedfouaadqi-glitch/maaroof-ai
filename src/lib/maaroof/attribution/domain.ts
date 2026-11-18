@@ -101,7 +101,7 @@ function safeHostname(value?: string): string | null {
 }
 
 function hostMatches(host: string, known: Set<string>): boolean {
-  return [...known].some((domain) => host === domain || host.endsWith(`. ${domain}`.replace(" ", "")));
+  return [...known].some((domain) => host === domain || host.endsWith(`.${domain}`));
 }
 
 function normalizedTag(value?: string): string {
@@ -131,8 +131,8 @@ export function classifyTrafficSource(input: {
   if (CRAWLER_UA_MARKERS.some((marker) => ua.includes(marker))) {
     return {
       channel: "crawler", source: null, medium: "bot",
-      confidence: "high", evidence: "user_agent",
-      reason: "Known crawler or automation marker in user-agent; exclude from human traffic.",
+      confidence: "medium", evidence: "user_agent",
+      reason: "User-agent matches a crawler marker; classification is provisional because user-agent strings can be spoofed.",
     };
   }
 
@@ -141,8 +141,8 @@ export function classifyTrafficSource(input: {
   if (utmSource && isAiLabel(utmSource)) {
     return {
       channel: "ai_referral", source: utmSource, medium: utmMedium || "referral",
-      confidence: "high", evidence: "utm",
-      reason: "Explicit campaign source identifies an AI answer platform.",
+      confidence: "medium", evidence: "utm",
+      reason: "Explicit campaign source labels an AI answer platform; campaign tags are client-supplied and not independently verified.",
     };
   }
 
@@ -150,29 +150,29 @@ export function classifyTrafficSource(input: {
   if (host && hostMatches(host, AI_REFERRER_HOSTS)) {
     return {
       channel: "ai_referral", source: host, medium: "referral",
-      confidence: "high", evidence: "referrer",
-      reason: "HTTP referrer hostname matches a recognized AI answer platform.",
+      confidence: "medium", evidence: "referrer",
+      reason: "HTTP referrer hostname matches a recognized AI answer platform; referrer data can be omitted or manipulated.",
     };
   }
 
   if (utmSource) {
     if (/^(cpc|ppc|paidsearch|paid-search)$/.test(utmMedium)) {
-      return { channel: "paid_search", source: utmSource, medium: utmMedium, confidence: "high", evidence: "utm", reason: "Explicit paid-search campaign tagging." };
+      return { channel: "paid_search", source: utmSource, medium: utmMedium, confidence: "medium", evidence: "utm", reason: "Client-supplied paid-search campaign tagging." };
     }
     if (/^(email|e-mail)$/.test(utmMedium)) {
-      return { channel: "email", source: utmSource, medium: utmMedium, confidence: "high", evidence: "utm", reason: "Explicit email campaign tagging." };
+      return { channel: "email", source: utmSource, medium: utmMedium, confidence: "medium", evidence: "utm", reason: "Client-supplied email campaign tagging." };
     }
     if (/^(social|social-network|social-media)$/.test(utmMedium)) {
-      return { channel: "social", source: utmSource, medium: utmMedium, confidence: "high", evidence: "utm", reason: "Explicit social campaign tagging." };
+      return { channel: "social", source: utmSource, medium: utmMedium, confidence: "medium", evidence: "utm", reason: "Client-supplied social campaign tagging." };
     }
     return { channel: "referral", source: utmSource, medium: utmMedium || null, confidence: "medium", evidence: "utm", reason: "Explicit campaign source is present but is not a recognized AI source." };
   }
 
   if (host && hostMatches(host, SEARCH_HOSTS)) {
-    return { channel: "organic_search", source: host, medium: "organic", confidence: "high", evidence: "referrer", reason: "Referrer hostname matches a recognized search engine." };
+    return { channel: "organic_search", source: host, medium: "organic", confidence: "medium", evidence: "referrer", reason: "Referrer hostname matches a recognized search engine; client-provided referrer data is not independently verified." };
   }
   if (host && hostMatches(host, SOCIAL_HOSTS)) {
-    return { channel: "social", source: host, medium: "referral", confidence: "high", evidence: "referrer", reason: "Referrer hostname matches a recognized social platform." };
+    return { channel: "social", source: host, medium: "referral", confidence: "medium", evidence: "referrer", reason: "Referrer hostname matches a recognized social platform; client-provided referrer data is not independently verified." };
   }
   if (host) {
     return { channel: "referral", source: host, medium: "referral", confidence: "medium", evidence: "referrer", reason: "A valid external referrer exists but is not in a recognized channel registry." };
