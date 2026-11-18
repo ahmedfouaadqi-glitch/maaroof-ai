@@ -95,7 +95,7 @@ No raw IP address is included in this initial contract. Do not add it by default
   conversion normalization, duplicate guards, currency-separated aggregation,
   explicit source-event membership, and provider-ID namespacing. Pure functions are added.
 - **Sessionization:** supplied session IDs are grouped without inventing sessions;
-  crawler-marked sessions are excluded from human session counts.
+  crawler-marked sessions are excluded from non-crawler session counts.
 - **A4 — MAAROOF integration:** a workspace-scoped report projection is added,
   with Arabic/English/Kurdish export-section adapters; it is not yet wired into
   existing reports or UI.
