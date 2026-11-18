@@ -1,0 +1,126 @@
+import {
+  mapGa4ReportRow,
+  type Ga4ReportRow,
+  type Ga4ReadAdapter,
+} from "./adapters";
+
+const GA4_DIMENSIONS = [
+  "sessionSource",
+  "sessionMedium",
+  "sessionCampaignName",
+  "pageReferrer",
+  "landingPagePlusQueryString",
+] as const;
+
+const GA4_METRICS = ["sessions", "keyEvents", "totalRevenue"] as const;
+
+type FetchLike = (
+  input: RequestInfo | URL,
+  init?: RequestInit,
+) => Promise<Response>;
+
+type Ga4ApiResponse = {
+  rows?: Ga4ReportRow[];
+  rowCount?: number;
+  metadata?: { currencyCode?: string };
+  propertyQuota?: unknown;
+};
+
+export type Ga4ReadReportInput = {
+  propertyId: string;
+  accessToken: string;
+  startDate: string;
+  endDate: string;
+  fetchImpl: FetchLike;
+  pageSize?: number;
+  maxPages?: number;
+};
+
+export type Ga4ReadReportResult = {
+  rows: ReturnType<typeof mapGa4ReportRow> extends infer T ? Exclude<T, null>[] : never;
+  currencyCode?: string;
+  warnings: string[];
+};
+
+/**
+ * Read-only GA4 Data API adapter.
+ *
+ * OAuth token acquisition/refresh and secure credential storage are deliberately
+ * outside this module. The caller supplies a short-lived access token and a
+ * fetch implementation, which also makes the adapter deterministic in tests.
+ */
+export const ga4ReadAdapter: Ga4ReadAdapter = {
+  provider: "ga4",
+  async readReport(input) {
+    throw new Error("Use readGa4AttributionReport with an explicit access token and fetch implementation.");
+  },
+};
+
+export async function readGa4AttributionReport(
+  input: Ga4ReadReportInput,
+): Promise<Ga4ReadReportResult> {
+  if (!/^\d+$/.test(input.propertyId)) throw new Error("invalid_ga4_property_id");
+  if (!input.accessToken.trim()) throw new Error("ga4_access_token_required");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(input.startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(input.endDate)) {
+    throw new Error("ga4_dates_must_be_yyyy_mm_dd");
+  }
+  if (input.startDate > input.endDate) throw new Error("ga4_start_date_after_end_date");
+
+  const pageSize = Math.min(100000, Math.max(1, Math.floor(input.pageSize ?? 10000)));
+  const maxPages = Math.min(100, Math.max(1, Math.floor(input.maxPages ?? 10)));
+  const endpoint = `https://analyticsdata.googleapis.com/v1beta/properties/${input.propertyId}:runReport`;
+  const rows: NonNullable<ReturnType<typeof mapGa4ReportRow>>[] = [];
+  const warnings: string[] = [];
+  let currencyCode: string | undefined;
+  let offset = 0;
+  let expectedRowCount: number | undefined;
+  let page = 0;
+
+  while (page < maxPages) {
+    const response = await input.fetchImpl(endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${input.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        dateRanges: [{ startDate: input.startDate, endDate: input.endDate }],
+        dimensions: GA4_DIMENSIONS.map((name) => ({ name })),
+        metrics: GA4_METRICS.map((name) => ({ name })),
+        limit: String(pageSize),
+        offset: String(offset),
+      }),
+    });
+
+    if (!response.ok) {
+      const detail = (await response.text()).slice(0, 1000);
+      throw new Error(`ga4_api_error:${response.status}:${detail}`);
+    }
+
+    const payload = await response.json() as Ga4ApiResponse;
+    const rawRows = Array.isArray(payload.rows) ? payload.rows : [];
+    if (typeof payload.rowCount === "number" && Number.isFinite(payload.rowCount)) {
+      expectedRowCount = payload.rowCount;
+    }
+    if (payload.metadata?.currencyCode) currencyCode = payload.metadata.currencyCode;
+
+    for (const rawRow of rawRows) {
+      const mapped = mapGa4ReportRow(rawRow);
+      if (mapped) rows.push(mapped);
+      else warnings.push("A GA4 row did not match the expected dimensions/metrics shape and was skipped.");
+    }
+
+    offset += rawRows.length;
+    page += 1;
+    if (rawRows.length === 0 || rawRows.length < pageSize) break;
+    if (expectedRowCount !== undefined && offset >= expectedRowCount) break;
+  }
+
+  if (expectedRowCount !== undefined && rows.length < expectedRowCount) {
+    warnings.push("The configured pagination limit was reached before all GA4 rows were read.");
+  } else if (page === maxPages && expectedRowCount === undefined) {
+    warnings.push("The configured pagination limit was reached; GA4 did not provide a row count.");
+  }
+
+  return { rows, currencyCode, warnings };
+}
