@@ -11,7 +11,7 @@ function toText(value: unknown): string {
 }
 
 function toStringList(value: unknown): string[] | null {
-  const values = Array.isArray(value) ? value : typeof value === "string" ? value.split(/[\\n,؛;|]+/) : null;
+  const values = Array.isArray(value) ? value : typeof value === "string" ? value.split(/[\n,؛;|]+/) : null;
   if (!values) return null;
   return values.map(toText).filter(Boolean);
 }
