@@ -39,6 +39,11 @@ const API_OUTPUTS: Partial<Record<ToolKey, ToolOutputContract>> = {
   keyword_intelligence: { transport: "json", successKind: "top_level_object", successFields: ["measured_keywords", "measured_pairs", "payload", "summary", "diagnostics", "evidence_state", "evidence_note", "parties", "competitor_validation", "context", "charged", "llms", "missing_fields", "clusters"], errorField: "error" },
 };
 
+const INTERNAL_OPTIONS: Partial<Record<ToolKey, ToolOptions>> = {
+  translate: { fields: ["target_lang"], contextFields: ["lang", "prior_results"] },
+  teach_space: { fields: [], contextFields: ["goal", "prior_results", "workspace_id"] },
+};
+
 const INTERNAL_OUTPUTS: Partial<Record<ToolKey, ToolOutputContract>> = {
   translate: { transport: "internal", successKind: "top_level_object", successFields: ["target_lang", "text", "charged"], errorField: "error" },
   teach_space: { transport: "internal", successKind: "top_level_object", successFields: ["saved_facts"], errorField: "error" },
@@ -109,7 +114,7 @@ function buildContract(key: ToolKey): ToolExecutionContract {
     entryPath: key === "maaroof" ? "/api/maaroof" : null,
     plannerSelectable,
     skillExecutable: plannerSelectable,
-    options: TOOL_OPTIONS[key] || null,
+    options: TOOL_OPTIONS[key] || INTERNAL_OPTIONS[key] || null,
     output: API_OUTPUTS[key] || INTERNAL_OUTPUTS[key] || null,
   };
 }
