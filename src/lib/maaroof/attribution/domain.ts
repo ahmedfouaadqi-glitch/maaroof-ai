@@ -80,7 +80,8 @@ const AI_REFERRER_HOSTS = new Set([
 ]);
 
 const SEARCH_HOSTS = new Set([
-  "google.com", "bing.com", "search.yahoo.com", "duckduckgo.com",
+  "google.com", "google.iq", "google.ae", "google.co.uk", "google.de", "google.fr", "google.ca", "google.com.au", "google.co.in", "google.co.jp", "google.com.tr", "google.com.sa", "google.com.eg",
+  "bing.com", "search.yahoo.com", "yahoo.co.uk", "duckduckgo.com",
   "yandex.com", "baidu.com", "ecosia.org", "brave.com",
 ]);
 
