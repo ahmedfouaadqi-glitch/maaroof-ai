@@ -3,6 +3,8 @@ import type { Ga4AttributionProjection } from "./ga4-projection";
 
 const LABELS: Record<ExportLang, {
   title: string;
+  sourceBreakdown: string;
+  status: string;
   sessions: string;
   aiSessions: string;
   keyEvents: string;
@@ -20,6 +22,8 @@ const LABELS: Record<ExportLang, {
 }> = {
   ar: {
     title: "ملخص GA4 للإحالات",
+    sourceBreakdown: "توزيع المصادر",
+    status: "حالة القياس",
     sessions: "الجلسات",
     aiSessions: "جلسات إحالة AI",
     keyEvents: "الأحداث الرئيسية",
@@ -37,6 +41,8 @@ const LABELS: Record<ExportLang, {
   },
   en: {
     title: "GA4 referral summary",
+    sourceBreakdown: "Source breakdown",
+    status: "Measurement status",
     sessions: "Sessions",
     aiSessions: "AI referral sessions",
     keyEvents: "Key events",
@@ -54,6 +60,8 @@ const LABELS: Record<ExportLang, {
   },
   ku: {
     title: "پوختەی ئاماژەکانی GA4",
+    sourceBreakdown: "دابەشکردنی سەرچاوەکان",
+    status: "دۆخی پێوانەکردن",
     sessions: "دانیشتنەکان",
     aiSessions: "دانیشتنەکانی ئاماژەی AI",
     keyEvents: "ڕووداوە سەرەکییەکان",
@@ -85,12 +93,12 @@ export function toGa4AttributionExportSections(
       [labels.keyEvents, projection.totalKeyEvents],
       [labels.revenue, projection.totalRevenue ?? "—"],
       [labels.currency, projection.currencyCode || "—"],
-      ["Status", labels[projection.measurementStatus]],
+      [labels.status, labels[projection.measurementStatus]],
     ],
   };
 
   const sources: ExportSection = {
-    heading: labels.title,
+    heading: labels.sourceBreakdown,
     kind: "table",
     table: {
       columns: [labels.channel, labels.source, labels.medium, labels.campaign, labels.sessions, labels.keyEvents, labels.revenue, labels.currency],
