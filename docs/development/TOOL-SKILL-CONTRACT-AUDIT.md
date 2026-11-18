@@ -101,3 +101,28 @@
 - لا قرار بتغيير schemas الخاصة بالـ endpoints قبل اكتمال مصفوفة المدخلات لكل route.
 - لا تغيير في CI أو معالجة revert attribution ضمن المرحلة الثانية.
 - لا تعديل على Supabase أو ملفات النماذج/المزودين.
+
+## 9. فجوتان إضافيتان في قبول خطة التنفيذ
+
+- `reasoning.server.ts` كان يبني TOOL_KEYS من TOOL_CATALOG حيث group=tools، مع استبعاد competitor_monitor فقط. لذلك كان يقبل `maaroof` كخطوة فرعية رغم أنه منسق ومدخله الحقيقي /api/maaroof وليس له toolPath فرعي، ما قد ينتج unknown_tool عند التنفيذ.
+- في المقابل، `teach_space` موجود في EXECUTABLE_TOOLS وضمن مهارة knowledge_training وينفذ داخلياً، لكنه group=agent ولذلك كان reasoning validator يرفضه. هذا يجعل تعريف skill execution غير متسق مع plan validation.
+- التعديل الأول في المرحلة الثانية وحّد تصنيف التنفيذ في `src/lib/tool-contracts.ts`: API/internal/coordinator/agent_only، active/paused/special، وplannerSelectable/skillExecutable، مع الحفاظ على alias competitor_compare. أصبح keyword_intelligence وteach_space قابلين للتخطيط، بينما خرج maaroof وcompetitor_monitor وagent.* من خطوات الأدوات الفرعية.
+
+## 10. تغييرات المرحلة الثانية المنفذة على فرع العمل
+
+- إضافة `src/lib/tool-contracts.ts` كسجل تصنيف وتنفيذ مركزي لكل ToolKey، مع اشتقاق المسارات وقابلية التخطيط والتنفيذ للمهارات.
+- إضافة `src/lib/tool-contracts.test.ts` لاختبار تغطية catalog/options/route loaders وتصنيف المفاتيح والـ alias.
+- تصدير DIRECT_DISPATCH_PATHS من direct-tool-dispatch.server.ts لتمكين اختبار تطابق مسارات التحميل دون تغيير طريقة dispatch.
+- تعديل skill-inference.ts لاشتقاق EXECUTABLE_TOOLS من العقود بدلاً من allowlist يدوية.
+- تعديل reasoning.server.ts لقبول مفاتيح plannerSelectable فقط، ما يزيل maaroof من الخطوات ويسمح teach_space الداخلي.
+- تعديل orchestrator.server.ts لاشتقاق toolPath() ووصف الأدوات من العقد الموحد، وإضافة تطبيع نصي/قائمي لحقول Keyword Intelligence وحقول UI/البحث المرصودة.
+- تعديل agent-input.ts لملء brand/site/category لأداة keyword_intelligence من سياق workspace/profile، وقبول site URL صحيح كبديل عن brand، وتمرير URL الكيان السابق في حقل site لا url.
+- تحديث اختبارات skill-inference وreasoning وagent-input لتغطية الحالات السابقة.
+- لم تتغير أي route endpoint، ولم تتغير Supabase/DB/Auth أو ملفات الأسرار أو موصلات/نماذج/مزودات الذكاء الاصطناعي.
+
+## 11. التحقق المتاح وحدوده
+
+- لم تُشغّل الاختبارات بعد على فرع work؛ workflow الحالي لا يشمل work/** ضمن push filters، ولا يوجد CI run جديد لهذا الفرع.
+- لا توجد node_modules/Bun في بيئة الأرشيف السابقة؛ لذلك لا أدعي نجاح Vitest أو TypeScript أو lint أو build لهذه التغييرات.
+- أضيفت اختبارات عقد واختبارات regression، لكنها تبقى غير متحققة تشغيلياً حتى تشغيلها في بيئة المشروع.
+- يجب مراجعة diff الفعلي ثم تشغيل الاختبارات قبل اعتماد هذه التغييرات أو الانتقال إلى بقية المرحلة الثانية.
