@@ -22,6 +22,7 @@ const BRAND_KEYS: Record<string, string[]> = {
   brand_boost: ["brand_name"],
   brand_authority: ["brand_name"],
   applied_ranking: ["brand_name"],
+  keyword_intelligence: ["brand"],
   company_email: ["company"],
   bizdev: ["business_name"],
   feasibility: ["project_name"],
@@ -146,6 +147,18 @@ export function fillToolInput(tool: string, input: any, ctx: EntityContext): Rec
     const first = links.map((l: any) => str(typeof l === "string" ? l : l?.url)).find((u: string) => /^https?:\/\//.test(u));
     if (first) out.url = first;
   }
+  if (tool === "keyword_intelligence") {
+    const links = Array.isArray(ctx.profile?.entity_links) ? ctx.profile!.entity_links : [];
+    const firstSite = links.map((l: any) => str(typeof l === "string" ? l : l?.url)).find((u: string) => u.startsWith("http://") || u.startsWith("https://"));
+    if (!str(out.site)) {
+      const site = str(ctx.workspace?.brand_url) || str(ctx.workspace?.entity_truth_card?.website_url) || str(ctx.workspace?.entity_truth_card?.official_url) || firstSite;
+      if (site) out.site = site;
+    }
+    if (!str(out.category)) {
+      const category = str(ctx.workspace?.profile?.industry) || str(ctx.workspace?.profile?.sector) || str(ctx.profile?.specialty);
+      if (category) out.category = category.slice(0, 240);
+    }
+  }
   if (tool === "known" && str(out.url) && !str(out.website)) out.website = str(out.url);
   if (tool === "suggest" && !str(out.description) && !str(out.sourceText)) {
     const d = ctx.goal?.trim() || [str(ctx.profile?.brand_name), str(ctx.profile?.brand_keywords)].filter(Boolean).join(" — ");
@@ -162,6 +175,10 @@ export function fillToolInput(tool: string, input: any, ctx: EntityContext): Rec
 
 /** Required fields still empty after filling. */
 export function missingFields(tool: string, input: Record<string, any>): string[] {
+  if (tool === "keyword_intelligence") {
+    // The endpoint can derive a brand from an explicit site URL; otherwise it needs a brand.
+    return str(input.brand) || str(input.site) ? [] : ["brand"];
+  }
   return (REQUIRED_FIELDS[tool] || []).filter((k) => str(input[k]).length < (tool === "geo_rewrite" && k === "text" ? MIN_REWRITE_SOURCE_LENGTH : 2));
 }
 
@@ -250,6 +267,6 @@ export function taskEntity(results: StepResult[]): { brand: string; url?: string
 export function taskEntityInput(tool: string, input: any, results: StepResult[]): Record<string, any> {
   const out: Record<string, any> = input && typeof input === "object" && !Array.isArray(input) ? { ...input } : {};
   const e = taskEntity(results);
-  if (e?.url && !str(out.url) && ["analyze", "known", "brand_authority", "social_analysis", "brand_boost"].includes(tool)) out.url = e.url;
+  if (e?.url && !str(out.url) && ["analyze", "known", "brand_authority", "social_analysis", "brand_boost", "keyword_intelligence"].includes(tool)) out.url = e.url;
   return out;
 }
