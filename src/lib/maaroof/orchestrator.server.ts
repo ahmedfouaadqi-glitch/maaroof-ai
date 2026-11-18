@@ -5,6 +5,7 @@ import { buildEvidenceFinalAnswer } from "./finalizer";
 // Maaroof orchestrator: Plan → Act → Reflect over the existing 16 tool endpoints.
 // Direct fetch to Lovable AI Gateway + internal HTTP to /api/* routes (worker-internal).
 import { describeToolOptions, enforceEnums, TOOL_OPTIONS } from "@/lib/tool-options";
+import { coerceToolInput } from "@/lib/tool-input-validation";
 import { checkEntityConsistency } from "@/lib/entity-consistency";
 import { fillToolInput, missingFields, clarifyQuestion, sanitizeReflection } from "./agent-input";
 import { sanitizeReport, planAsList, simulationSummary } from "./mode-report";
@@ -1267,8 +1268,16 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
       try {
         const { stripAgentOnlyFields } = await import("./probe-answer");
         const N = await import("./narration");
+        const normalizedInput = normalizeToolInput(enforceEnums(step.tool, filled));
+        const typedInput = coerceToolInput(step.tool, normalizedInput);
+        if (typedInput.issues.length) {
+          await ctx.emit("tool_input_warning", {
+            tool: step.tool,
+            fields: typedInput.issues.map((issue) => ({ field: issue.field, expected: issue.expected })),
+          });
+        }
         const body = {
-           ...stripAgentOnlyFields(step.tool, normalizeToolInput(enforceEnums(step.tool, filled)) as any),
+           ...stripAgentOnlyFields(step.tool, typedInput.input as any),
            // Use a detected/selected country when available. An unresolved visitor scope
            // is passed as automatic, not fabricated into a country.
            scope: geo.country
