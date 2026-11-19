@@ -23,13 +23,13 @@ describe("typed tool input normalization", () => {
       competitors: ["Alpha", "Beta"],
       budget_iqd: 125000,
     });
-    expect(feasibility).toEqual({ competitors: "Alpha, Beta", budget_iqd: 125000 });
+    expect({ ...feasibility }).toEqual({ competitors: "Alpha, Beta", budget_iqd: 125000 });
 
     const compare = normalizeToolInput("compare", { competitors: "Alpha\nBeta" });
-    expect(compare).toEqual({ competitors: ["Alpha", "Beta"] });
+    expect({ ...compare }).toEqual({ competitors: ["Alpha", "Beta"] });
 
     const bizdev = normalizeToolInput("bizdev", { goals: ["retain customers", "grow revenue"] });
-    expect(bizdev).toEqual({ goals: "retain customers, grow revenue" });
+    expect({ ...bizdev }).toEqual({ goals: "retain customers, grow revenue" });
     const invalidBudget = coerceToolInput("feasibility", normalizeToolInput("feasibility", {
       budget_iqd: { amount: 125000 },
     }));
