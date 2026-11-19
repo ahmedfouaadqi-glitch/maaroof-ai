@@ -13,7 +13,7 @@ P0 broad audit and environment-file remediation were explicitly waived as prereq
 | Phase | Status | Evidence / remaining boundary |
 |---|---|---|
 | P0 | Waived for sequencing; **not passed** | Source-level risks R-06/07/08 fixed and R-13 clarified; .env risk remains open; Supabase and live tenant isolation excluded |
-| P1 | Partial | Automatic pruning stopped; tool-result/workspace/chat/agent-task deletion blocked; schedules soft-cancelled; knowledge spaces archive/restore; knowledge assets guarded; memory/files delete controls hidden; agent targets deactivate instead of delete. Workspace-subtree archive and persisted/RLS verification remain outstanding |
+| P1 | Partial | Automatic pruning stopped; tool-result/workspace/chat deletion blocked; agent-task delete control removed; schedules soft-cancelled; knowledge spaces archive/restore; knowledge assets guarded; memory/files delete controls hidden; agent targets deactivate instead of delete. Workspace-subtree archive and persisted/RLS verification remain outstanding |
 | P2 | Partial | Owner-mode UI hides balance and pricing surfaces; server identity/RLS and single-owner enforcement not verified |
 | P3 | Partial | Direct-tool scope hardened; job-ID reads and cancellation require explicit workspace scope; resume/export use paginated scoped API reads. DB/RLS and all persisted tables remain unverified |
 | P4 | Partial | 24 tool keys, 17 option schemas, 21 skills, 70 package variants/69 names reviewed; source-level route map added; paused competitor monitor has no planner options or UI API calls; original package ZIP/license, field-level contract and callback audit outstanding |
