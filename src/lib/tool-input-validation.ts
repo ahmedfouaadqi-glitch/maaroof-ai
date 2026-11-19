@@ -91,6 +91,19 @@ export function normalizeToolInput(tool: string, raw: unknown): Record<string, u
   return out;
 }
 
+/** Keep endpoint-provided clarification fields inside the declared tool input surface. */
+export function filterDeclaredNeedFields(tool: string, raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const options = TOOL_OPTIONS[tool];
+  if (!options) return [];
+  const allowed = new Set([
+    ...options.fields,
+    ...(options.uiFields || []),
+    ...(options.contextFields || []),
+  ]);
+  return [...new Set(raw.filter((field): field is string => typeof field === "string" && allowed.has(field)))];
+}
+
 function toBoolean(value: unknown): boolean | null {
   if (typeof value === "boolean") return value;
   if (value === 1 || value === "1" || (typeof value === "string" && value.toLowerCase() === "true")) return true;
