@@ -172,7 +172,7 @@ export function KnowledgeSpaces({ userId, workspaceId = null }: { userId: string
               s.id === activeId ? "border-primary bg-primary/15 text-primary" : "border-border/60 text-muted-foreground hover:text-foreground"
             }`}
           >
-            {s.name} · {s.nodes_count ?? 0}
+            {s.name} · {s.nodes_count ?? 0}{s.status === "archived" ? (lang === "en" ? " · Archived" : lang === "ku" ? " · ئەرشیفکراو" : " · مؤرشفة") : ""}
           </button>
         ))}
         <div className="flex items-center gap-1">
@@ -365,6 +365,7 @@ export function KnowledgeSpaces({ userId, workspaceId = null }: { userId: string
                   <span className="text-sm font-medium">{p.title}</span>
                   <span className="text-[11px] text-muted-foreground">q{p.quality}</span>
                   <button
+                    disabled={active.status === "archived"}
                     onClick={() => run(p.id, async () => { await approve({ data: { promptId: p.id, approved: !p.approved } }); await refreshActive(active.id); })}
                     className={`ms-auto rounded-md border px-2 py-1 text-[11px] ${p.approved ? "border-emerald-500/40 text-emerald-500" : "border-amber-500/40 text-amber-500"}`}
                   >
@@ -384,7 +385,7 @@ export function KnowledgeSpaces({ userId, workspaceId = null }: { userId: string
                       setInterviewEngines(Array.isArray(result?.engines) ? result.engines : []);
                       await refreshActive(active.id);
                     })}
-                    disabled={busy === "gen"}
+                    disabled={busy === "gen" || active.status === "archived"}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-primary/50 px-3 py-2 text-xs text-primary disabled:opacity-50"
                   >
                     {busy === "gen" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <MessageSquareQuote className="h-3.5 w-3.5" />}
@@ -448,6 +449,7 @@ export function KnowledgeSpaces({ userId, workspaceId = null }: { userId: string
                         <div className="mt-2 flex items-center gap-1">
                           <input
                             value={answers[q.id] || ""}
+                            disabled={active.status === "archived"}
                             onChange={(e) => setAnswers((s) => ({ ...s, [q.id]: e.target.value }))}
                             placeholder={t("teach_answer")}
                             className="flex-1 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs outline-none focus:border-primary"
@@ -460,7 +462,7 @@ export function KnowledgeSpaces({ userId, workspaceId = null }: { userId: string
                               setAnswers((s) => ({ ...s, [q.id]: "" }));
                               await refreshActive(active.id);
                             })}
-                            disabled={busy === q.id}
+                            disabled={busy === q.id || active.status === "archived"}
                             className="rounded-lg border border-primary/50 px-3 py-2 text-xs text-primary disabled:opacity-50"
                           >
                             {busy === q.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("teach_send")}
