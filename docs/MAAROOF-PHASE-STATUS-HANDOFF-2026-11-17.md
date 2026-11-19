@@ -13,10 +13,10 @@ P0 broad audit and environment-file remediation were explicitly waived as prereq
 | Phase | Status | Evidence / remaining boundary |
 |---|---|---|
 | P0 | Waived for sequencing; **not passed** | Source-level risks R-06/07/08 fixed and R-13 clarified; .env risk remains open; Supabase and live tenant isolation excluded |
-| P1 | Partial | Automatic memory pruning stopped; tool-result, workspace, template and chat deletion paths blocked/hidden; persistent archive/restore not implemented |
+| P1 | Partial | Automatic pruning stopped; tool-result/workspace/chat deletion blocked; schedules soft-cancelled; knowledge spaces archive/restore; knowledge asset, memory and attachment delete controls blocked/hidden. Workspace-subtree archive and persisted/RLS verification remain outstanding |
 | P2 | Partial | Owner-mode UI hides balance and pricing surfaces; server identity/RLS and single-owner enforcement not verified |
-| P3 | Partial | Workspace identity propagated through direct-tool UI; MCI, knowledge, memory, Known, analysis, what-if, reports and history scope hardened; DB/RLS and all persisted tables unverified |
-| P4 | Partial | 24 tool keys, 18 option schemas, 21 skills, 70 package variants/69 names reviewed; route map added; full callback/contract and license audit outstanding |
+| P3 | Partial | Direct-tool scope hardened; job-ID reads and cancellation require explicit workspace scope; resume/export use paginated scoped API reads. DB/RLS and all persisted tables remain unverified |
+| P4 | Partial | 24 tool keys, 17 option schemas, 21 skills, 70 package variants/69 names reviewed; source-level route map added; stale options removed for paused competitor monitor; field-level contract, callback and license audit outstanding |
 | P5 | Partial | Layer/data-flow evidence updated for MCI, knowledge, memory, jobs and reports; persisted auth/RLS paths excluded |
 | P6 | Partial | Export sanitization, omission accounting, complete task-event pagination and localized client HTML generator added; no browser/round-trip export suite |
 | P7 | Foundation implemented | Versioned report contract v2 with six axes and evidence-linked validation; no persistent report store |
@@ -26,7 +26,7 @@ P0 broad audit and environment-file remediation were explicitly waived as prereq
 | P11 | Foundation implemented | Approval lifecycle state machine and tests; no persisted approval events or owner authorization |
 | P12 | Foundation implemented | Random share token, hash-only storage primitive, expiry/revocation and workspace-bound grant; no persistent grant route/access log |
 | P13 | Foundation implemented | Reports Center, preview and White Label components exist; no persistent Reports Center data/API integration |
-| P14 | **Passed at validated checkpoint** | 146 test files / 745 tests passed / 3 skipped; TypeScript and production build passed. Full lint remains diagnostic/non-blocking and not clean |
+| P14 | **Passed at validated checkpoint** | Latest validated code checkpoint: 147 test files / 750 tests passed / 3 skipped; TypeScript and production build passed. Full lint remains diagnostic/non-blocking and not clean |
 | P15 | Handoff prepared | Isolated feature branch only; no PR, merge, deployment or change to main |
 
 ## Protected constraints verified
@@ -43,15 +43,15 @@ P0 broad audit and environment-file remediation were explicitly waived as prereq
 ## Validation run
 
 Validated implementation checkpoint:
-- Run ID: `44196303790`
-- URL: https://github.com/ahmedfouaadqi-glitch/maaroof-ai/actions/runs/44196303790
-- Commit: `32b05b7ff34a31ac31e866ee21d5441198fa1c5a`
-- Unit tests: **146 files passed; 745 tests passed; 3 skipped**.
+- Run ID: `44438260974`
+- URL: https://github.com/ahmedfouaadqi-glitch/maaroof-ai/actions/runs/44438260974
+- Commit: `1f12b8630b35e7d7b55bae6e745daca9e625c433`
+- Unit tests: **147 files passed; 750 tests passed; 3 skipped**.
 - TypeScript validation: passed.
 - Production build: passed.
-- Repository lint: non-blocking diagnostic; existing Prettier violations remain, so this is not a lint pass.
+- Repository lint: non-blocking diagnostic; **27,683 errors and 152 warnings** remain, predominantly existing formatting violations. This is not a lint pass.
 
-Subsequent changes to documentation only update the handoff; the implementation checkpoint above is the last fully validated source checkpoint.
+The latest source checkpoint validates the P1/P3/P4 code changes. Subsequent commits in this sequence update review documentation only.
 
 ## Release posture
 
