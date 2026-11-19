@@ -23,7 +23,7 @@ The full repository lint command `bun run lint` reports:
 
 The lint step is configured as a non-blocking diagnostic so TypeScript validation and production build can still run. This is not a lint pass. No mass-formatting operation was performed.
 
-## Latest-head validation
+## Historical latest-head validation — 2026-11-17
 
 A further run is executing for the current handoff head:
 - Run ID: `44057397415`
