@@ -4,7 +4,8 @@ import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";
 import { supabase } from "@/integrations/supabase/client";
-import { Brain, Trash2, Plus, Loader2, ArrowLeft, Star } from "lucide-react";
+import { Brain, Plus, Loader2, ArrowLeft, Star } from "lucide-react";
+import { nonDestructiveNotice } from "@/lib/non-destructive-guard";
 
 export const Route = createFileRoute("/maaroof/memory")({
   head: () => ({
@@ -41,11 +42,6 @@ function MemoryPage() {
   }
   useEffect(() => { if (user) load(); }, [user?.id]);
 
-  async function del(id: string) {
-    if (!confirm(t("auto.delete_this_memory"))) return;
-    await supabase.from("maaroof_memory").delete().eq("id", id);
-    setItems((p) => p.filter((x) => x.id !== id));
-  }
   async function bump(id: string, importance: number) {
     await supabase.from("maaroof_memory").update({ importance }).eq("id", id);
     setItems((p) => p.map((x) => x.id === id ? { ...x, importance } : x));
@@ -57,12 +53,6 @@ function MemoryPage() {
     }).select("id, kind, content, importance, created_at, last_accessed_at").single();
     if (data) setItems((p) => [data as any, ...p]);
     setNewContent("");
-  }
-  async function clearAll() {
-    if (!confirm(t("auto.delete_all_memory_cannot_be_undone"))) return;
-    if (!user) return;
-    await supabase.from("maaroof_memory").delete().eq("user_id", user.id);
-    setItems([]);
   }
 
   if (loading) return <div className="min-h-screen grid place-items-center"><Loader2 className="animate-spin" /></div>;
@@ -82,8 +72,9 @@ function MemoryPage() {
         <div className="flex items-center gap-3">
           <Link to="/maaroof" className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"><ArrowLeft className="w-4 h-4" /> رجوع</Link>
           <h1 className="text-xl font-bold flex items-center gap-2"><Brain className="w-5 h-5 text-primary" /> ذاكرة معروف</h1>
-          <button onClick={clearAll} className="ms-auto text-xs text-destructive hover:underline">{t("auto.delete_all")}</button>
+          <span className="ms-auto text-xs text-muted-foreground">{lang === "en" ? "Memory retention mode" : lang === "ku" ? "دۆخی پاراستنی بیرگە" : "وضع حماية الذاكرة"}</span>
         </div>
+        <p className="text-xs text-muted-foreground">{nonDestructiveNotice(lang)}</p>
 
         <div className="rounded-lg border bg-card p-3 flex gap-2 flex-wrap">
           <select value={newKind} onChange={(e) => setNewKind(e.target.value as any)} className="border rounded px-2 py-1 bg-background text-sm">
@@ -108,7 +99,6 @@ function MemoryPage() {
                     <Star className="w-3 h-3" fill={n <= m.importance ? "currentColor" : "none"} />
                   </button>
                 ))}
-                <button onClick={() => del(m.id)} className="text-destructive ms-2"><Trash2 className="w-4 h-4" /></button>
               </div>
             </div>
           ))}

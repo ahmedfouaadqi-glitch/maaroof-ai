@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { X, FileText, Trash2, Eye, LoaderCircle } from "lucide-react";
+import { X, FileText, Eye, LoaderCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { HelpTip } from "./HelpTip";
@@ -8,7 +8,7 @@ type L = "ar" | "en" | "ku";
 const tr = (l: L, ar: string, en: string, ku: string) => (l === "en" ? en : l === "ku" ? ku : ar);
 type Row = { id: string; name: string; mime: string; size: number; created_at: string; status: string; analysis: string | null; path: string };
 
-/** In-workspace file manager: lists the user's uploads, shows analysis, deletes after confirmation. */
+/** In-workspace file manager: lists the user's uploads and shows analysis without deleting retained files. */
 export function FilesManager({ lang, onClose, workspaceId = null }: { lang: L; onClose: () => void; workspaceId?: string | null }) {
   const { user } = useAuth();
   const [rows, setRows] = useState<Row[] | null>(null);
@@ -23,18 +23,6 @@ export function FilesManager({ lang, onClose, workspaceId = null }: { lang: L; o
       .then(({ data, error }) => { if (error) setErr(error.message); setRows((data as Row[]) || []); });
   }, [user?.id, workspaceId]);
 
-  async function remove(r: Row) {
-    if (!confirm(tr(lang, `حذف «${r.name}» نهائياً؟`, `Delete "${r.name}" permanently?`, `«${r.name}» بسڕدرێتەوە؟`))) return;
-    await supabase.storage.from("task-files").remove([r.path]);
-    if (!user) return;
-    let removeQuery = supabase.from("task_attachments").delete().eq("id", r.id).eq("user_id", user.id);
-    removeQuery = workspaceId ? removeQuery.eq("workspace_id", workspaceId) : removeQuery.is("workspace_id", null);
-    const { error } = await removeQuery;
-    if (error) { setErr(tr(lang, "تعذر الحذف.", "Could not delete.", "نەسڕایەوە.")); return; }
-    setRows((rs) => (rs || []).filter((x) => x.id !== r.id));
-    if (view?.id === r.id) setView(null);
-  }
-
   const kb = (n: number) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
 
   return (
@@ -48,6 +36,7 @@ export function FilesManager({ lang, onClose, workspaceId = null }: { lang: L; o
         </div>
         <div className="overflow-y-auto p-4">
           {err && <p role="alert" className="mb-2 text-xs text-destructive">{err}</p>}
+          <p className="mb-2 text-xs text-muted-foreground">{tr(lang, "الحذف معطل لحماية ملفات العميل وسجلاته.", "Deletion is disabled to preserve client files and history.", "سڕینەوە ناچالاکە بۆ پاراستنی فایل و مێژووی کڕیار.")}</p>
           {rows === null ? <LoaderCircle className="size-5 animate-spin text-muted-foreground" /> : rows.length === 0 ? (
             <p className="text-sm text-muted-foreground">{tr(lang, "لم ترفع أي ملف بعد. ارفع ملفاً أو صورة من صندوق المهمة أو المقابلة.", "No files yet. Upload one from the task box or the interview.", "هێشتا فایل نییە.")}</p>
           ) : (
@@ -58,7 +47,6 @@ export function FilesManager({ lang, onClose, workspaceId = null }: { lang: L; o
                     <span className="min-w-0 flex-1 truncate font-medium" dir="auto">{r.name}</span>
                     <span className={`rounded-full px-2 py-0.5 text-[10px] ${r.analysis ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>{r.analysis ? tr(lang, "محلَّل", "Analyzed", "شیکراوە") : tr(lang, "غير محلَّل", "Not analyzed", "شینەکراوە")}</span>
                     <button type="button" onClick={() => setView(view?.id === r.id ? null : r)} disabled={!r.analysis} className="rounded-lg p-1 hover:bg-muted disabled:opacity-30" aria-label="view"><Eye className="size-4" /></button>
-                    <button type="button" onClick={() => void remove(r)} className="rounded-lg p-1 text-destructive hover:bg-destructive/10" aria-label="delete"><Trash2 className="size-4" /></button>
                   </div>
                   <p className="mt-1 text-[11px] text-muted-foreground" dir="ltr">{r.mime} · {kb(r.size)} · {new Date(r.created_at).toLocaleDateString(lang === "en" ? "en" : "ar-IQ")}</p>
                   {view?.id === r.id && r.analysis && <p className="mt-2 whitespace-pre-wrap rounded-lg bg-muted/50 p-2 text-xs leading-5" dir="auto">{r.analysis}</p>}

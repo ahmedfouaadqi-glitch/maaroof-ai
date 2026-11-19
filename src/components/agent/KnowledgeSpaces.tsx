@@ -6,13 +6,13 @@ import { useServerFn } from "@tanstack/react-start";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  listKnowledgeSpaces, createKnowledgeSpace, updateKnowledgeSpace, deleteKnowledgeSpace,
-  listSpaceAssets, registerSpaceAsset, learnSpaceAsset, deleteSpaceAsset,
+  listKnowledgeSpaces, createKnowledgeSpace, updateKnowledgeSpace, archiveKnowledgeSpace,
+  listSpaceAssets, registerSpaceAsset, learnSpaceAsset,
   approveSpaceKnowledge, generateSpaceInterview, answerSpaceInterview, getSpaceDashboard,
 } from "@/lib/teaching.functions";
 import {
   Loader2, Plus, Upload, Link2, FileText, Brain, CheckCircle2, XCircle,
-  Trash2, Sparkles, MessageSquareQuote, GraduationCap, AlertTriangle,
+  Archive, ArchiveRestore, Sparkles, MessageSquareQuote, GraduationCap, AlertTriangle,
 } from "lucide-react";
 
 type Space = any;
@@ -25,11 +25,10 @@ export function KnowledgeSpaces({ userId, workspaceId = null }: { userId: string
   const list = useServerFn(listKnowledgeSpaces);
   const create = useServerFn(createKnowledgeSpace);
   const patch = useServerFn(updateKnowledgeSpace);
-  const remove = useServerFn(deleteKnowledgeSpace);
+  const archive = useServerFn(archiveKnowledgeSpace);
   const loadAssets = useServerFn(listSpaceAssets);
   const register = useServerFn(registerSpaceAsset);
   const learn = useServerFn(learnSpaceAsset);
-  const dropAsset = useServerFn(deleteSpaceAsset);
   const approve = useServerFn(approveSpaceKnowledge);
   const genQuestions = useServerFn(generateSpaceInterview);
   const answer = useServerFn(answerSpaceInterview);
@@ -102,7 +101,7 @@ export function KnowledgeSpaces({ userId, workspaceId = null }: { userId: string
 
   const onUpload = (files: FileList | null) =>
     run("upload", async () => {
-      if (!files?.length || !activeId) return;
+      if (!files?.length || !activeId || active?.status === "archived") return;
       for (const file of Array.from(files).slice(0, 10)) {
         const path = `${userId}/${activeId}/${Date.now()}-${file.name.replace(/[^\w.\-]+/g, "_")}`;
         const up = await supabase.storage.from("knowledge-spaces").upload(path, file, { upsert: false });
@@ -120,7 +119,7 @@ export function KnowledgeSpaces({ userId, workspaceId = null }: { userId: string
 
   const onAddUrl = () =>
     run("url", async () => {
-      if (!activeId || !/^https?:\/\//i.test(url)) return;
+      if (!activeId || active?.status === "archived" || !/^https?:\/\//i.test(url)) return;
       const reg: any = await register({ data: { spaceId: activeId, title: url, sourceType: "url", sourceUrl: url } });
       setUrl("");
       await learn({ data: { assetId: reg.asset.id } });
@@ -129,7 +128,7 @@ export function KnowledgeSpaces({ userId, workspaceId = null }: { userId: string
 
   const onAddText = () =>
     run("text", async () => {
-      if (!activeId || text.trim().length < 20) return;
+      if (!activeId || active?.status === "archived" || text.trim().length < 20) return;
       const reg: any = await register({
         data: { spaceId: activeId, title: text.trim().slice(0, 60), sourceType: "text", text: text.trim() },
       });
@@ -216,7 +215,7 @@ export function KnowledgeSpaces({ userId, workspaceId = null }: { userId: string
             />
             <button
               onClick={() => fileRef.current?.click()}
-              disabled={busy === "upload"}
+              disabled={busy === "upload" || active.status === "archived"}
               className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 px-3 py-2 text-xs hover:border-primary disabled:opacity-50"
             >
               {busy === "upload" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
@@ -224,10 +223,10 @@ export function KnowledgeSpaces({ userId, workspaceId = null }: { userId: string
             </button>
             <div className="flex items-center gap-1">
               <input
-                value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…"
+                value={url} onChange={(e) => setUrl(e.target.value)} disabled={active.status === "archived"} placeholder="https://…"
                 className="w-56 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs outline-none focus:border-primary"
               />
-              <button onClick={onAddUrl} disabled={busy === "url"} className="inline-flex items-center gap-1 rounded-lg border border-border/60 px-3 py-2 text-xs hover:border-primary disabled:opacity-50">
+              <button onClick={onAddUrl} disabled={busy === "url" || active.status === "archived"} className="inline-flex items-center gap-1 rounded-lg border border-border/60 px-3 py-2 text-xs hover:border-primary disabled:opacity-50">
                 {busy === "url" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Link2 className="h-3.5 w-3.5" />}
                 {t("teach_add_url")}
               </button>
@@ -236,6 +235,7 @@ export function KnowledgeSpaces({ userId, workspaceId = null }: { userId: string
               <input
                 type="checkbox"
                 checked={(active.inheritance || {}).enabled !== false}
+                disabled={active.status === "archived"}
                 onChange={(e) =>
                   run("inherit", async () => {
                     await patch({ data: { spaceId: active.id, inheritance: { ...(active.inheritance || {}), enabled: e.target.checked } } });
@@ -245,21 +245,30 @@ export function KnowledgeSpaces({ userId, workspaceId = null }: { userId: string
               />
               {t("teach_inherit")}
             </label>
-            <button
-              onClick={() => run("drop", async () => { await remove({ data: { spaceId: active.id } }); setActiveId(null); await refreshSpaces(); })}
-              className="inline-flex items-center gap-1 rounded-lg border border-destructive/40 px-3 py-2 text-xs text-destructive"
-            >
-              <Trash2 className="h-3.5 w-3.5" /> {t("teach_delete")}
-            </button>
+            {active.status === "archived" ? (
+              <button
+                onClick={() => run("restore", async () => { await patch({ data: { spaceId: active.id, status: "active" } }); await refreshSpaces(); })}
+                className="inline-flex items-center gap-1 rounded-lg border border-primary/40 px-3 py-2 text-xs text-primary"
+              >
+                <ArchiveRestore className="h-3.5 w-3.5" /> {lang === "en" ? "Restore" : lang === "ku" ? "گەڕاندنەوە" : "استعادة"}
+              </button>
+            ) : (
+              <button
+                onClick={() => run("archive", async () => { await archive({ data: { spaceId: active.id } }); await refreshSpaces(); })}
+                className="inline-flex items-center gap-1 rounded-lg border border-border/60 px-3 py-2 text-xs text-muted-foreground"
+              >
+                <Archive className="h-3.5 w-3.5" /> {lang === "en" ? "Archive" : lang === "ku" ? "ئەرشیفکردن" : "أرشفة"}
+              </button>
+            )}
           </div>
 
           <div className="mt-3">
             <textarea
-              value={text} onChange={(e) => setText(e.target.value)} rows={2}
+              value={text} onChange={(e) => setText(e.target.value)} disabled={active.status === "archived"} rows={2}
               placeholder={t("teach_add_text")}
               className="w-full rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-xs outline-none focus:border-primary"
             />
-            <button onClick={onAddText} disabled={busy === "text"} className="mt-1 inline-flex items-center gap-1 rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:border-primary disabled:opacity-50">
+            <button onClick={onAddText} disabled={busy === "text" || active.status === "archived"} className="mt-1 inline-flex items-center gap-1 rounded-lg border border-border/60 px-3 py-1.5 text-xs hover:border-primary disabled:opacity-50">
               {busy === "text" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
               {t("teach_learn")}
             </button>
@@ -308,22 +317,19 @@ export function KnowledgeSpaces({ userId, workspaceId = null }: { userId: string
                   <div className="ms-auto flex items-center gap-1">
                     {a.status === "needs_approval" && (
                       <>
-                        <button onClick={() => run(a.id, async () => { await approve({ data: { assetId: a.id, approved: true } }); await refreshActive(active.id); })} className="inline-flex items-center gap-1 rounded-md border border-emerald-500/40 px-2 py-1 text-[11px] text-emerald-500">
+                        <button disabled={active.status === "archived"} onClick={() => run(a.id, async () => { await approve({ data: { assetId: a.id, approved: true } }); await refreshActive(active.id); })} className="inline-flex items-center gap-1 rounded-md border border-emerald-500/40 px-2 py-1 text-[11px] text-emerald-500">
                           <CheckCircle2 className="h-3 w-3" /> {t("teach_approve")}
                         </button>
-                        <button onClick={() => run(a.id, async () => { await approve({ data: { assetId: a.id, approved: false } }); await refreshActive(active.id); })} className="inline-flex items-center gap-1 rounded-md border border-border/60 px-2 py-1 text-[11px] text-muted-foreground">
+                        <button disabled={active.status === "archived"} onClick={() => run(a.id, async () => { await approve({ data: { assetId: a.id, approved: false } }); await refreshActive(active.id); })} className="inline-flex items-center gap-1 rounded-md border border-border/60 px-2 py-1 text-[11px] text-muted-foreground">
                           <XCircle className="h-3 w-3" /> {t("teach_reject")}
                         </button>
                       </>
                     )}
                     {(a.status === "failed" || a.status === "queued") && (
-                      <button onClick={() => run(a.id, async () => { await learn({ data: { assetId: a.id } }); await refreshActive(active.id); })} className="inline-flex items-center gap-1 rounded-md border border-primary/40 px-2 py-1 text-[11px] text-primary">
+                      <button disabled={active.status === "archived"} onClick={() => run(a.id, async () => { await learn({ data: { assetId: a.id } }); await refreshActive(active.id); })} className="inline-flex items-center gap-1 rounded-md border border-primary/40 px-2 py-1 text-[11px] text-primary">
                         {busy === a.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Brain className="h-3 w-3" />} {t("teach_learn")}
                       </button>
                     )}
-                    <button onClick={() => run(a.id, async () => { await dropAsset({ data: { assetId: a.id } }); await refreshActive(active.id); })} className="rounded-md border border-border/60 p-1 text-muted-foreground">
-                      <Trash2 className="h-3 w-3" />
-                    </button>
                   </div>
                 </div>
                 {a.classification?.summary && <p className="mt-1.5 text-xs text-muted-foreground">{a.classification.summary}</p>}
@@ -341,6 +347,7 @@ export function KnowledgeSpaces({ userId, workspaceId = null }: { userId: string
                   </span>
                   <span className="text-[11px] text-muted-foreground">{n.confidence}% / q{n.quality}</span>
                   <button
+                    disabled={active.status === "archived"}
                     onClick={() => run(n.id, async () => { await approve({ data: { nodeId: n.id, approved: !n.approved } }); await refreshActive(active.id); })}
                     className={`ms-auto rounded-md border px-2 py-1 text-[11px] ${n.approved ? "border-emerald-500/40 text-emerald-500" : "border-amber-500/40 text-amber-500"}`}
                   >

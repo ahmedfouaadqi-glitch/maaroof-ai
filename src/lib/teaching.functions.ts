@@ -3,6 +3,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { blockDestructiveOperation } from "@/lib/non-destructive-mode";
 import { interviewSamplingParams, INTERVIEW_FALLBACK_MODEL } from "@/lib/model-params";
 import { ENGINE_KEYS, ENGINE_CATALOG, ENGINE_PERSONA, type EngineKey } from "@/lib/ai-engines";
 
@@ -108,15 +109,18 @@ export const updateKnowledgeSpace = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const deleteKnowledgeSpace = createServerFn({ method: "POST" })
+/** Archive a knowledge space reversibly; retain all linked assets, nodes and interviews. */
+export const archiveKnowledgeSpace = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { spaceId: string }) => z.object({ spaceId: uuid }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context as any;
     await assertOwnedSpace(supabase, data.spaceId, userId);
-    const { error } = await supabase.from("knowledge_spaces").delete().eq("id", data.spaceId).eq("user_id", userId);
+    const { error } = await supabase.from("knowledge_spaces")
+      .update({ status: "archived", updated_at: new Date().toISOString() })
+      .eq("id", data.spaceId).eq("user_id", userId);
     if (error) throw new Error(error.message);
-    return { ok: true };
+    return { ok: true, archived: true };
   });
 
 // ===== Assets ==============================================================
@@ -223,25 +227,7 @@ export const learnSpaceAsset = createServerFn({ method: "POST" })
 export const deleteSpaceAsset = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { assetId: string }) => z.object({ assetId: uuid }).parse(d))
-  .handler(async ({ data, context }) => {
-    const { supabase, userId } = context as any;
-    const { data: asset } = await supabase
-      .from("knowledge_space_assets")
-      .select("id, space_id, file_path")
-      .eq("id", data.assetId)
-      .eq("user_id", userId)
-      .maybeSingle();
-    if (!asset) throw new Error("not_found");
-    await assertOwnedSpace(supabase, asset.space_id, userId);
-    if (asset.file_path) {
-      await supabase.storage.from("knowledge-spaces").remove([asset.file_path]);
-    }
-    const { error } = await supabase.from("knowledge_space_assets").delete().eq("id", data.assetId).eq("user_id", userId);
-    if (error) throw new Error(error.message);
-    const { refreshSpaceMetrics } = await import("@/lib/maaroof/teaching.server");
-    await refreshSpaceMetrics(asset.space_id);
-    return { ok: true };
-  });
+  .handler(async () => blockDestructiveOperation("knowledge_asset_delete"));
 
 // ===== Approval ============================================================
 export const approveSpaceKnowledge = createServerFn({ method: "POST" })
