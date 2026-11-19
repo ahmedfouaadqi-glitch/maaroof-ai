@@ -3,12 +3,12 @@ import { inWorkspaceScope } from "@/lib/workspace-scope";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { useServerFn } from "@tanstack/react-start";
-import { CalendarClock, Plus, Pause, Play, Trash2, Loader2 } from "lucide-react";
+import { CalendarClock, Plus, Pause, Play, XCircle, Loader2 } from "lucide-react";
 import {
   listSchedules,
   createSchedule,
   updateScheduleStatus,
-  deleteSchedule,
+  cancelSchedule,
 } from "@/lib/maaroof-schedules.functions";
 
 type Schedule = {
@@ -45,7 +45,7 @@ export function SchedulesPanel({ workspaceId, defaultPrompt }: { workspaceId: st
   const list = useServerFn(listSchedules);
   const create = useServerFn(createSchedule);
   const setStatus = useServerFn(updateScheduleStatus);
-  const del = useServerFn(deleteSchedule);
+  const cancel = useServerFn(cancelSchedule);
   const [items, setItems] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -92,9 +92,9 @@ export function SchedulesPanel({ workspaceId, defaultPrompt }: { workspaceId: st
     await refresh();
   }
 
-  async function remove(id: string) {
-    if (!confirm(t("auto.delete_schedule"))) return;
-    await del({ data: { id } });
+  async function cancelOne(s: Schedule) {
+    if (!confirm(`${t("auto.cancel")} "${s.name}"?`)) return;
+    await cancel({ data: { id: s.id } });
     await refresh();
   }
 
@@ -149,10 +149,14 @@ export function SchedulesPanel({ workspaceId, defaultPrompt }: { workspaceId: st
               <div className="flex items-center gap-2">
                 <span className={`inline-block w-1.5 h-1.5 rounded-full ${s.status === "active" ? "bg-emerald-500" : s.status === "paused" ? "bg-amber-500" : "bg-muted-foreground"}`} />
                 <span className="flex-1 truncate font-medium">{s.name}</span>
-                <button onClick={() => toggle(s)} className="p-1 rounded hover:bg-muted" title={s.status === "active" ? t("auto.pause") : t("auto.resume")}>
-                  {s.status === "active" ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
-                </button>
-                <button onClick={() => remove(s.id)} className="p-1 rounded hover:bg-destructive/10 text-destructive" title={t("auto.delete")}><Trash2 className="w-3 h-3" /></button>
+                {s.status !== "cancelled" && (
+                  <>
+                    <button onClick={() => toggle(s)} className="p-1 rounded hover:bg-muted" title={s.status === "active" ? t("auto.pause") : t("auto.resume")}>
+                      {s.status === "active" ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                    </button>
+                    <button onClick={() => cancelOne(s)} className="p-1 rounded hover:bg-muted text-muted-foreground" title={t("auto.cancel")}><XCircle className="w-3 h-3" /></button>
+                  </>
+                )}
               </div>
               <div className="text-[10px] text-muted-foreground mt-1 line-clamp-1">{s.prompt}</div>
               <div className="text-[10px] text-muted-foreground mt-0.5 flex justify-between">
