@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Radar, Bell, ExternalLink, Sparkles } from "lucide-react";
+import { Loader2, Radar, ExternalLink, Sparkles } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { supabase } from "@/integrations/supabase/client";
 import { apiFetch } from "@/lib/api-client";
 import { ToolResultExport } from "@/components/ToolResultExport";
 import { ToolHistory } from "@/components/ToolHistory";
@@ -21,10 +20,10 @@ const TX = {
     intro: "اكتشف من يُنافسك فعلاً — حتى من لم تسمّهم — مع سبب كل علاقة ومصادرها. ما يأتي من ملاحظة الذكاء الاصطناعي وحدها يُوسَم بوضوح ولا يُعدّ موثّقاً.",
     brand: "اسم علامتك", site: "موقعك (اختياري)", sector: "القطاع (اختياري)", quick: "سريع", deep: "عميق", run: "اكتشف المنافسين",
     running: "جارٍ البحث في الويب وتصنيف العلاقات…", why: "لماذا؟", conf: "الثقة", ai: "ملاحظة ذكاء اصطناعي", observed: "مرصود من مصادر", sources: "المصادر",
-    watch: "راقب", startWatch: "ابدأ المراقبة للمختارين", watchCost: "كل فحص للمراقبة يُخصم من حصتك", left: "مراقبات متاحة", none: "لم يُعثر على منافسين موثوقين.", started: "تم إنشاء المراقبة. تجدها في أداة «مراقبة المنافسين».",
+    watchPaused: "مراقبة المنافسين متوقفة مؤقتاً؛ لم تُنشأ مراقبة ولم يُخصم أي رصيد.", none: "لم يُعثر على منافسين موثوقين.",
     filtered: "استُبعد كنتائج كاذبة", map: "خريطة العلاقات",
     cats: { direct: "مباشر", indirect: "غير مباشر", substitute: "بديل", hidden: "خفي", emerging: "ناشئ", perceived: "إدراك الذكاء الاصطناعي", seasonal: "موسمي" },
-    errs: { monitor_disabled: "المراقبة غير مفعّلة لحسابك.", monitor_max_watches: "بلغت الحد الأقصى لعدد المراقبات.", monitor_max_competitors: "اخترت منافسين أكثر من المسموح.", monitor_min_frequency: "التكرار أقل من المسموح.", brand_required: "اكتب اسم العلامة." } as Record<string, string>,
+    errs: { brand_required: "اكتب اسم العلامة." } as Record<string, string>,
   },
   en: {
     aiWhy: "An AI engine named this from its own memory, and we found no web source for it in your market. It may be right, but we don't treat it as evidence until a source appears.", reused: "Reused a previous result from", refresh: "Refresh now", toGeo: "GEO analysis", toCompare: "Compare selected",
@@ -32,10 +31,10 @@ const TX = {
     intro: "Discover who actually competes with you — even unnamed rivals — with a reason and sources for every relation. AI-only observations are clearly flagged and never treated as verified.",
     brand: "Your brand", site: "Website (optional)", sector: "Sector (optional)", quick: "Quick", deep: "Deep", run: "Discover competitors",
     running: "Searching the web and classifying relations…", why: "Why?", conf: "Confidence", ai: "AI observation", observed: "Observed in sources", sources: "Sources",
-    watch: "Watch", startWatch: "Start monitoring selected", watchCost: "Each monitoring check is charged from your quota", left: "Watches available", none: "No reliable competitors found.", started: "Monitoring created. Find it in the Competitor Monitor tool.",
+    watchPaused: "Competitor monitoring is temporarily paused; no watch was created and no credits were charged.", none: "No reliable competitors found.",
     filtered: "Filtered as false positives", map: "Relations map",
     cats: { direct: "Direct", indirect: "Indirect", substitute: "Substitute", hidden: "Hidden", emerging: "Emerging", perceived: "AI perception", seasonal: "Seasonal" },
-    errs: { monitor_disabled: "Monitoring is disabled for your account.", monitor_max_watches: "You reached the maximum number of watches.", monitor_max_competitors: "Too many competitors selected.", monitor_min_frequency: "Frequency below the allowed minimum.", brand_required: "Enter a brand name." } as Record<string, string>,
+    errs: { brand_required: "Enter a brand name." } as Record<string, string>,
   },
   ku: {
     aiWhy: "ئەم ناوە زیرەکی دەستکرد لە بیرەوەری خۆیەوە هێناویەتی و هیچ سەرچاوەیەکی وێبمان لە بازاڕەکەتدا بۆی نەدۆزییەوە. لەوانەیە ڕاست بێت، بەڵام تا سەرچاوەیەک دەرنەکەوێت وەک بەڵگە ناژمێردرێت.", reused: "ئەنجامێکی پێشوومان بەکارهێنا لە", refresh: "ئێستا نوێ بکەرەوە", toGeo: "شیکاری GEO", toCompare: "بەراوردکردنی هەڵبژێردراوەکان",
@@ -43,24 +42,12 @@ const TX = {
     intro: "بزانە کێ بەڕاستی ڕکابەرتە — تەنانەت ئەوانەی ناوت نەبردوون — لەگەڵ هۆکار و سەرچاوەی هەر پەیوەندییەک. تێبینی تەنها زیرەکی دەستکرد بە ڕوونی نیشان دەدرێت.",
     brand: "ناوی براندەکەت", site: "ماڵپەڕ (ئارەزوومەندانە)", sector: "کەرت (ئارەزوومەندانە)", quick: "خێرا", deep: "قووڵ", run: "دۆزینەوەی ڕکابەران",
     running: "گەڕان لە وێب و پۆلێنکردنی پەیوەندییەکان…", why: "بۆچی؟", conf: "متمانە", ai: "تێبینی زیرەکی دەستکرد", observed: "لە سەرچاوەکان بینراوە", sources: "سەرچاوەکان",
-    watch: "چاودێری", startWatch: "دەستپێکردنی چاودێری بۆ هەڵبژێردراوەکان", watchCost: "هەر پشکنینێکی چاودێری لە بەشەکەت دەبڕدرێت", left: "چاودێری بەردەست", none: "هیچ ڕکابەرێکی متمانەپێکراو نەدۆزرایەوە.", started: "چاودێری دروستکرا. لە ئامرازی چاودێری ڕکابەران بیدۆزەوە.",
+    watchPaused: "چاودێری ڕکابەران کاتی ڕاگیراوە؛ هیچ چاودێرییەک دروست نەکرا و هیچ باجێک نەبڕدرا.", none: "هیچ ڕکابەرێکی متمانەپێکراو نەدۆزرایەوە.",
     filtered: "وەک ئەنجامی هەڵە لابرا", map: "نەخشەی پەیوەندییەکان",
     cats: { direct: "ڕاستەوخۆ", indirect: "ناڕاستەوخۆ", substitute: "جێگرەوە", hidden: "شاراوە", emerging: "نوێ", perceived: "تێگەیشتنی AI", seasonal: "وەرزی" },
-    errs: { monitor_disabled: "چاودێری بۆ هەژمارەکەت ناچالاکە.", monitor_max_watches: "گەیشتیتە زۆرترین ژمارەی چاودێری.", monitor_max_competitors: "ڕکابەری زیاتر لە ڕێگەپێدراو.", monitor_min_frequency: "دووبارەبوونەوە کەمترە لە ڕێگەپێدراو.", brand_required: "ناوی براند بنووسە." } as Record<string, string>,
+    errs: { brand_required: "ناوی براند بنووسە." } as Record<string, string>,
   },
 };
-
-async function post(path: string, body: any) {
-  const { data: { session } } = await supabase.auth.getSession();
-  const r = await apiFetch(path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}) },
-    body: JSON.stringify(body),
-  });
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j?.error || j?.message || "failed");
-  return j;
-}
 
 export function KnownDiscovery({ workspaceId = null, workspace = null }: { workspaceId?: string | null; workspace?: any } = {}) {
   const { lang } = useI18n();
@@ -73,8 +60,6 @@ export function KnownDiscovery({ workspaceId = null, workspace = null }: { works
   const [err, setErr] = useState("");
   const [result, setResult] = useState<any>(null);
   const [picked, setPicked] = useState<string[]>([]);
-  const [policy, setPolicy] = useState<any>(null);
-  const [note, setNote] = useState("");
   const auth = useAuth() as any;
   const [stage, setStage] = useState(0);
 
@@ -92,8 +77,6 @@ export function KnownDiscovery({ workspaceId = null, workspace = null }: { works
     setPicked([]);
     setErr("");
   }, [workspaceId, workspace]);
-
-  useEffect(() => { post("/api/competitor-monitor", { action: "policy", workspace_id: workspaceId }).then(setPolicy).catch(() => {}); }, [workspaceId]);
 
   // Real server-driven progress via SSE: stages arrive as the run advances.
   const run = async (force = false) => {
@@ -133,29 +116,18 @@ export function KnownDiscovery({ workspaceId = null, workspace = null }: { works
     finally { setBusy(false); }
   };
 
-  const startWatch = async () => {
-    setErr(""); setNote("");
-    try {
-      await post("/api/competitor-monitor", { action: "create", brand: result?.brand || brand, competitors: picked, frequency_hours: Math.max(24, policy?.policy?.min_frequency_hours || 24), lang, workspace_id: workspaceId });
-      setNote(L.started); setPicked([]);
-      post("/api/competitor-monitor", { action: "policy", workspace_id: workspaceId }).then(setPolicy).catch(() => {});
-    } catch (e: any) { setErr(L.errs[e?.message] || e?.message || "failed"); }
-  };
-
   const groups = useMemo(() => {
     const g: Record<string, any[]> = {};
     for (const r of result?.relations || []) (g[r.category] ||= []).push(r);
     return g;
   }, [result]);
 
-  const maxComp = policy?.policy?.max_competitors ?? 5;
-  const canWatch = policy?.policy?.enabled !== false;
-  const watchesLeft = policy ? Math.max(0, (policy.policy?.max_watches ?? 0) - (policy.active ?? 0)) : null;
-
+  const maxComp = 5;
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-border bg-card/40 p-4">
         <p className="mb-3 text-xs text-muted-foreground">{L.intro}</p>
+        <p className="mb-3 text-xs text-muted-foreground">{L.watchPaused}</p>
         <div className="grid gap-2 sm:grid-cols-3">
           <input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder={L.brand} className="rounded-lg border border-border bg-background px-3 py-2 text-sm" />
           <input value={site} onChange={(e) => setSite(e.target.value)} placeholder={L.site} className="rounded-lg border border-border bg-background px-3 py-2 text-sm" />
@@ -172,7 +144,6 @@ export function KnownDiscovery({ workspaceId = null, workspace = null }: { works
         </div>
         {busy && <p className="mt-2 text-xs text-muted-foreground">{L.step} {stage + 1}/4 — {L.steps[stage]}</p>}
         {err && <p className="mt-2 text-xs text-destructive">{err}</p>}
-        {note && <p className="mt-2 text-xs text-primary">{note}</p>}
       </div>
 
       {result && (
@@ -227,13 +198,15 @@ export function KnownDiscovery({ workspaceId = null, workspace = null }: { works
                       </span>
                     )}
                     <button onClick={() => sendHandoff("analyze", r.entity_domain || r.entity_name)} className="rounded-md border border-border px-2 py-0.5 text-[11px] hover:border-primary hover:text-primary">{L.toGeo}</button>
-                    {canWatch && (
-                      <label className="ms-auto flex items-center gap-1 text-xs">
-                        <input type="checkbox" checked={picked.includes(r.entity_name)} disabled={!picked.includes(r.entity_name) && picked.length >= maxComp}
-                          onChange={(e) => setPicked((p) => e.target.checked ? [...p, r.entity_name] : p.filter((x) => x !== r.entity_name))} />
-                        <Bell className="size-3" /> {L.watch}
-                      </label>
-                    )}
+                    <label className="ms-auto flex items-center gap-1 text-xs">
+                      <input
+                        type="checkbox"
+                        checked={picked.includes(r.entity_name)}
+                        disabled={!picked.includes(r.entity_name) && picked.length >= maxComp}
+                        onChange={(e) => setPicked((p) => e.target.checked ? [...p, r.entity_name] : p.filter((x) => x !== r.entity_name))}
+                      />
+                      {L.toCompare}
+                    </label>
                   </div>
                   {r.reason && <p className="mt-1 text-xs text-foreground/80"><b>{L.why}</b> {r.reason}</p>}
                   {r.sources?.length > 0 && (
@@ -250,14 +223,9 @@ export function KnownDiscovery({ workspaceId = null, workspace = null }: { works
             </div>
           ))}
           {result.filtered?.length > 0 && <p className="text-[11px] text-muted-foreground">{L.filtered}: {result.filtered.map((f: any) => f.name).join("، ")}</p>}
-          {canWatch && picked.length > 0 && (
-            <div className="sticky bottom-2 flex flex-wrap items-center gap-3 rounded-xl border border-primary/40 bg-card p-3 text-xs shadow-lg">
-              <span>{L.watchCost}{policy?.cost_tokens ? ` (${policy.cost_tokens})` : ""}</span>
-              {watchesLeft !== null && <span className="text-muted-foreground">{L.left}: {watchesLeft}</span>}
+          {picked.length > 0 && (
+            <div className="sticky bottom-2 flex justify-end rounded-xl border border-primary/40 bg-card p-3 text-xs shadow-lg">
               <button onClick={() => sendHandoff("compare", [result.brand, ...picked].join("\n"))} className="rounded-lg border border-primary px-3 py-2 font-semibold text-primary">{L.toCompare}</button>
-              <button onClick={startWatch} disabled={watchesLeft === 0} className="ms-auto inline-flex items-center gap-1 rounded-lg bg-primary px-3 py-2 font-semibold text-primary-foreground disabled:opacity-50">
-                <Bell className="size-4" /> {L.startWatch} ({picked.length})
-              </button>
             </div>
           )}
         </>
