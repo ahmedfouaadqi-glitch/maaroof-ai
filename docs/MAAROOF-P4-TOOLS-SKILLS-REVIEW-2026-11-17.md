@@ -98,7 +98,7 @@
 | `bizdev` | `POST /api/bizdev` | `BizDev` | Bearer auth + `workspaceGuard` |
 | `research` | `POST /api/research` | `SmartResearch` | Bearer auth + `workspaceGuard` |
 | `visibility` | `POST /api/visibility` | `VisibilityIntelligence` | يتحقق يدوياً من ملكية مساحة العمل؛ لا يستخدم `workspaceGuard` |
-| `brand_boost` | `POST /api/brand-boost` مع `brand-authority` و`brand-boost-report-settings` و`site-discovery` كمسارات مساندة | `BrandBoostAgent` | سياق المساحة يمر عبر المكوّن؛ المسارات المساندة لها عقود مستقلة |
+| `brand_boost` | `POST /api/brand-boost` مع `brand-authority` و`brand-boost-report-settings` كمسارات مساندة | `BrandBoostAgent` | سياق المساحة يمر عبر المكوّن؛ المسارات المساندة لها عقود مستقلة |
 | `company_email` | `POST /api/company-email` | `CompanyOutreach` | Bearer auth + `workspaceGuard` |
 | `applied_ranking` | `POST /api/applied-ranking` | `AppliedRanking` | Bearer auth + `workspaceGuard` |
 | `geo_strategist` | `POST /api/geo-strategist` | `GeoStrategist` | Bearer auth + `workspaceGuard`; لا يُشغّل مساحة عميل دون سياق صالح |
