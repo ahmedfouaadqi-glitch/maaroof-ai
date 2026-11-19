@@ -461,3 +461,9 @@
 - تم منع الاعتماد على الخصائص الموروثة في lookup للأنواع والحقول.
 - تمت إضافة قيم enum المغلقة لأداة suggest من تعريف Body، واختبار enforceEnums.
 - لم تُثبّت قوائم المنصات الديناميكية في metadata لتجنب تباعدها عن سجل المحركات الفعلي.
+
+
+### توسيع مخرجات العقود
+
+- تم توسيع stable output fields لأدوات social_analysis وkeyword_intelligence وbrand_boost بعد مراجعة return payloads الفعلية.
+- ما زالت المخرجات وصفية وليست schema validator؛ لا يُسقط أي حقل من route response بسبب metadata.
