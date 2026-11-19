@@ -101,14 +101,15 @@ export const updateScheduleStatus = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const deleteSchedule = createServerFn({ method: "POST" })
+/** Cancel a schedule without deleting its history or configuration. */
+export const cancelSchedule = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: unknown) => z.object({ id: z.string().uuid() }).parse(input))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { error } = await supabase
       .from("maaroof_schedules")
-      .delete()
+      .update({ status: "cancelled" })
       .eq("id", data.id)
       .eq("user_id", userId);
     if (error) throw new Error(error.message);
