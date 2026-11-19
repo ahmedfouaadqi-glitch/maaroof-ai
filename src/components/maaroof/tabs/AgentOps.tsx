@@ -130,7 +130,7 @@ export function AgentOps({ section }: { section: AgentOpsSection }) {
 
   const toggleTarget = async (target: any) => {
     if (!user) return;
-    const active = target.active !== false;
+    const active = target.active === true;
     const { error } = await supabase.from("agent_targets")
       .update({ active: !active })
       .eq("id", target.id)
@@ -402,7 +402,7 @@ export function AgentOps({ section }: { section: AgentOpsSection }) {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => runNow(tg.id)}
-                    disabled={runningId !== null || tg.active === false}
+                    disabled={runningId !== null || tg.active !== true}
                     className="inline-flex items-center gap-1 rounded-md border border-accent/40 bg-accent/10 px-2 py-1 text-xs font-semibold text-accent hover:bg-accent/20 disabled:opacity-50"
                   >
                     {runningId === tg.id ? <Loader2 className="size-3 animate-spin" /> : <Play className="size-3" />}
@@ -411,11 +411,11 @@ export function AgentOps({ section }: { section: AgentOpsSection }) {
                   <button
                     type="button"
                     onClick={() => void toggleTarget(tg)}
-                    title={tg.active === false ? t("auto.resume") : t("auto.pause")}
-                    aria-label={tg.active === false ? t("auto.resume") : t("auto.pause")}
+                    title={tg.active !== true ? t("auto.resume") : t("auto.pause")}
+                    aria-label={tg.active !== true ? t("auto.resume") : t("auto.pause")}
                     className="text-muted-foreground hover:text-foreground"
                   >
-                    {tg.active === false ? <Play className="size-4" /> : <Pause className="size-4" />}
+                    {tg.active !== true ? <Play className="size-4" /> : <Pause className="size-4" />}
                   </button>
                 </div>
               </div>
