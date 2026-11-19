@@ -125,7 +125,7 @@ export function coerceToolInput(
   const issues: ToolInputIssue[] = [];
 
   for (const [field, type] of Object.entries(fieldTypes)) {
-    if (!(field in input) || input[field] == null) continue;
+    if (!Object.prototype.hasOwnProperty.call(input, field) || input[field] == null) continue;
     const value = input[field];
     let normalized: unknown = value;
     let valid = true;
