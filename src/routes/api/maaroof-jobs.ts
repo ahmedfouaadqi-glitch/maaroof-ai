@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
 import { isMissingWorkspaceIdColumn, isStaleJob, isTerminalJobStatus, parseAfter } from "@/lib/maaroof/jobs";
 import { jobPageWindow, splitPage } from "@/lib/maaroof/job-pagination";
+import { hasExplicitWorkspaceScope, hasWorkspaceScopeQuery } from "@/lib/maaroof/job-workspace-scope";
 
 async function auth(request: Request) {
   const h = request.headers.get("authorization") || "";
@@ -22,7 +23,7 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
         const url = new URL(request.url);
         const id = url.searchParams.get("id");
         const allWorkspaces = url.searchParams.get("all_workspaces") === "1";
-        if (id && !allWorkspaces && !url.searchParams.has("workspace_id")) {
+        if (id && !allWorkspaces && !hasWorkspaceScopeQuery(url.searchParams)) {
           return Response.json({ error: "workspace_scope_required" }, { status: 400 });
         }
         const { page, pageSize, from, to } = jobPageWindow(url.searchParams.get("page"), url.searchParams.get("page_size"));
@@ -59,7 +60,7 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
           return Response.json({ jobs: pageResult.items, page, page_size: pageSize, has_more: pageResult.hasMore, next_page: pageResult.hasMore ? page + 1 : null, scope_fallback: false });
         }
         if (!/^[0-9a-f-]{36}$/i.test(id)) return Response.json({ error: "bad_id" }, { status: 400 });
-        const hasWorkspaceScope = url.searchParams.has("workspace_id") && !allWorkspaces;
+        const hasWorkspaceScope = hasWorkspaceScopeQuery(url.searchParams) && !allWorkspaces;
         let jobQuery = db.from("maaroof_jobs").select("*").eq("id", id).eq("user_id", a.userId);
         if (hasWorkspaceScope) jobQuery = workspaceId ? jobQuery.eq("workspace_id", workspaceId) : jobQuery.is("workspace_id", null);
         let { data: job, error: jobLookupError } = await jobQuery.maybeSingle();
@@ -120,7 +121,7 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
         const id = String(body?.job_id || "");
         if (!/^[0-9a-f-]{36}$/i.test(id)) return Response.json({ error: "bad_id" }, { status: 400 });
         const db = a.admin as any;
-        const hasWorkspaceScope = Object.prototype.hasOwnProperty.call(body || {}, "workspace_id");
+        const hasWorkspaceScope = hasExplicitWorkspaceScope(body);
         if (!hasWorkspaceScope) return Response.json({ error: "workspace_scope_required" }, { status: 400 });
         const rawWorkspaceId = typeof body?.workspace_id === "string" ? body.workspace_id.trim() : "";
         const workspaceId = rawWorkspaceId || null;
