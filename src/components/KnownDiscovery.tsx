@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Radar, ExternalLink, Sparkles } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
+import { supabase } from "@/integrations/supabase/client";
 import { apiFetch } from "@/lib/api-client";
 import { ToolResultExport } from "@/components/ToolResultExport";
 import { ToolHistory } from "@/components/ToolHistory";
@@ -80,7 +81,7 @@ export function KnownDiscovery({ workspaceId = null, workspace = null }: { works
 
   // Real server-driven progress via SSE: stages arrive as the run advances.
   const run = async (force = false) => {
-    setBusy(true); setErr(""); setNote(""); setPicked([]); setStage(0);
+    setBusy(true); setErr(""); setPicked([]); setStage(0);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const r = await apiFetch("/api/known", {
