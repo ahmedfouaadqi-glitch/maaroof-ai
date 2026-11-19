@@ -1,11 +1,12 @@
-// Data-only map of what each tool endpoint actually accepts (read from the
-// request body of every /api/* route). Lets the Maaroof planner pick correct
-// tabs/options and lets the executor drop invalid enum values. No logic.
+// Data-only map of planner-facing inputs and closed enums for active tools.
+// This is not a complete HTTP body schema: auth, workspace, locale/geo context,
+// runtime flags and large binary payloads are supplied by the UI/runtime.
+// Lets the planner pick supported options and the executor drop invalid enums.
 
 export type ToolOptions = {
   /** UI tabs / modes this tool exposes (for the planner's understanding). */
   tabs?: string[];
-  /** Body fields the endpoint reads. */
+  /** User-selectable request inputs exposed to the planner. */
   fields: string[];
   /** Closed-value fields: any other value is dropped (endpoint default applies). */
   enums?: Record<string, string[]>;
