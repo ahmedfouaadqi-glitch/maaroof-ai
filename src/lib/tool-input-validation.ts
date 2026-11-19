@@ -120,7 +120,7 @@ export function coerceToolInput(
   tool: string,
   raw: Record<string, unknown>,
 ): { input: Record<string, unknown>; issues: ToolInputIssue[] } {
-  const fieldTypes = TOOL_OPTIONS[tool]?.fieldTypes || {};
+  const fieldTypes = Object.prototype.hasOwnProperty.call(TOOL_OPTIONS, tool) ? TOOL_OPTIONS[tool]?.fieldTypes || {} : {};
   const input: Record<string, unknown> = { ...raw };
   const issues: ToolInputIssue[] = [];
 
