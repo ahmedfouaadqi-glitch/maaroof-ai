@@ -6,9 +6,17 @@ import { useServerFn } from "@tanstack/react-start";
 import { useI18n } from "@/lib/i18n";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  listKnowledgeSpaces, createKnowledgeSpace, updateKnowledgeSpace, archiveKnowledgeSpace,
-  listSpaceAssets, registerSpaceAsset, learnSpaceAsset,
-  approveSpaceKnowledge, generateSpaceInterview, answerSpaceInterview, getSpaceDashboard,
+  listKnowledgeSpaces,
+  createKnowledgeSpace,
+  updateKnowledgeSpace,
+  archiveKnowledgeSpace,
+  listSpaceAssets,
+  registerSpaceAsset,
+  learnSpaceAsset,
+  approveSpaceKnowledge,
+  generateSpaceInterview,
+  answerSpaceInterview,
+  getSpaceDashboard,
 } from "@/lib/teaching.functions";
 import {
   Loader2, Plus, Upload, Link2, FileText, Brain, CheckCircle2, XCircle,

@@ -1,9 +1,17 @@
 // Workspace background jobs: GET list / events, POST cancel. Owner-only.
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
-import { isMissingWorkspaceIdColumn, isStaleJob, isTerminalJobStatus, parseAfter } from "@/lib/maaroof/jobs";
+import {
+  isMissingWorkspaceIdColumn,
+  isStaleJob,
+  isTerminalJobStatus,
+  parseAfter,
+} from "@/lib/maaroof/jobs";
 import { jobPageWindow, splitPage } from "@/lib/maaroof/job-pagination";
-import { hasExplicitWorkspaceScope, hasWorkspaceScopeQuery } from "@/lib/maaroof/job-workspace-scope";
+import {
+  hasExplicitWorkspaceScope,
+  hasWorkspaceScopeQuery,
+} from "@/lib/maaroof/job-workspace-scope";
 
 async function auth(request: Request) {
   const h = request.headers.get("authorization") || "";

@@ -8,7 +8,24 @@ import { supabase } from "@/integrations/supabase/client";
 import { runAgentNow, runAgentCommand, publishToChannel } from "@/lib/agent.functions";
 import { ChannelsPanel } from "@/components/ChannelsPanel";
 import { apiFetch } from "@/lib/api-client";
-import { Loader2, Bot, Plus, ExternalLink, Activity, Globe, Lightbulb, AlertTriangle, ShieldCheck, Play, Pause, Send, Sparkles, Eye, Send as SendIcon, MessageCircle } from "lucide-react";
+import {
+  Loader2,
+  Bot,
+  Plus,
+  ExternalLink,
+  Activity,
+  Globe,
+  Lightbulb,
+  AlertTriangle,
+  ShieldCheck,
+  Play,
+  Pause,
+  Send,
+  Sparkles,
+  Eye,
+  Send as SendIcon,
+  MessageCircle,
+} from "lucide-react";
 import { useVisibility } from "@/lib/visibility";
 import { TokensBar } from "@/components/TokensBar";
 
