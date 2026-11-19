@@ -34,10 +34,18 @@ export function FilesManager({
 
   useEffect(() => {
     if (!user) return;
-    let query = supabase.from("task_attachments").select("id,name,mime,size,created_at,status,analysis,path,workspace_id").eq("user_id", user.id);
+    let query = supabase
+      .from("task_attachments")
+      .select("id,name,mime,size,created_at,status,analysis,path,workspace_id")
+      .eq("user_id", user.id);
     query = workspaceId ? query.eq("workspace_id", workspaceId) : query.is("workspace_id", null);
-    query.order("created_at", { ascending: false }).limit(100)
-      .then(({ data, error }) => { if (error) setErr(error.message); setRows((data as Row[]) || []); });
+    query
+      .order("created_at", { ascending: false })
+      .limit(100)
+      .then(({ data, error }) => {
+        if (error) setErr(error.message);
+        setRows((data as Row[]) || []);
+      });
   }, [user?.id, workspaceId]);
 
   const kb = (n: number) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);

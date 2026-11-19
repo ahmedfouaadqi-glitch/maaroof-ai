@@ -37,7 +37,13 @@ const ADMIN_SUB = {
   tasks_used: 0,
   tasks_used_today: 0,
   last_run_date: null,
-  agent_addons: { name: "Admin", description: "Unlimited admin access", monthly_tasks: 99999, daily_task_cap: 9999, max_targets: 999 },
+  agent_addons: {
+    name: "Admin",
+    description: "Unlimited admin access",
+    monthly_tasks: 99999,
+    daily_task_cap: 9999,
+    max_targets: 999,
+  },
 };
 
 export type AgentOpsSection = "tasks" | "channels";

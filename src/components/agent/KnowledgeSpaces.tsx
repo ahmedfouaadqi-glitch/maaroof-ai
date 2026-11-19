@@ -19,8 +19,20 @@ import {
   getSpaceDashboard,
 } from "@/lib/teaching.functions";
 import {
-  Loader2, Plus, Upload, Link2, FileText, Brain, CheckCircle2, XCircle,
-  Archive, ArchiveRestore, Sparkles, MessageSquareQuote, GraduationCap, AlertTriangle,
+  Loader2,
+  Plus,
+  Upload,
+  Link2,
+  FileText,
+  Brain,
+  CheckCircle2,
+  XCircle,
+  Archive,
+  ArchiveRestore,
+  Sparkles,
+  MessageSquareQuote,
+  GraduationCap,
+  AlertTriangle,
 } from "lucide-react";
 
 type Space = any;

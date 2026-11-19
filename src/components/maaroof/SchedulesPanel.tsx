@@ -65,14 +65,18 @@ export function SchedulesPanel({
   useEffect(() => {
     refresh();
   }, []);
-  useEffect(() => { if (defaultPrompt && !prompt) setPrompt(defaultPrompt); }, [defaultPrompt]);
+  useEffect(() => {
+    if (defaultPrompt && !prompt) setPrompt(defaultPrompt);
+  }, [defaultPrompt]);
 
   async function refresh() {
     setLoading(true);
     try {
       const res = await list();
       setItems((res.items as Schedule[]) || []);
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function submit() {
