@@ -42,7 +42,7 @@ function flatten(value: unknown): string {
 export function normalizeToolInput(tool: string, raw: unknown): Record<string, unknown> {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
   const out = Object.create(null) as Record<string, unknown>;
-  const fieldTypes = TOOL_OPTIONS[tool]?.fieldTypes || {};
+  const fieldTypes = Object.prototype.hasOwnProperty.call(TOOL_OPTIONS, tool) ? TOOL_OPTIONS[tool]?.fieldTypes || {} : {};
 
   for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
     if (value == null) continue;
@@ -94,7 +94,7 @@ export function normalizeToolInput(tool: string, raw: unknown): Record<string, u
 /** Keep endpoint-provided clarification fields inside the declared tool input surface. */
 export function filterDeclaredNeedFields(tool: string, raw: unknown): string[] {
   if (!Array.isArray(raw)) return [];
-  const options = TOOL_OPTIONS[tool];
+  const options = Object.prototype.hasOwnProperty.call(TOOL_OPTIONS, tool) ? TOOL_OPTIONS[tool] : undefined;
   if (!options) return [];
   const allowed = new Set([
     ...options.fields,
