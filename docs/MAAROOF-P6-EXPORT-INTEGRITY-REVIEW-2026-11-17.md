@@ -58,3 +58,13 @@ The website's `robots.txt` and `sitemap.xml` remain site-level resources, not cl
 - أضيفت اختبارات للترجمة، عقد التقرير، التعقيم، المشاركة، وسير الموافقات.
 
 **الحالة لا تزال PARTIAL.** لم تنفذ اختبارات round-trip فعلية لملفات PDF/DOCX/PPTX/XLSX أو اختبار متصفح بصري. كما أن مولد HTML ومكونات Reports Center لم ترتبط بعد بمخزن تقارير دائم.
+
+
+## Additional task-export integrity check — 2026-11-19
+
+- Task-history export continues to fetch every event page through `GET /api/maaroof-jobs`, using the archived job's own `workspace_id` on every request.
+- The job ID endpoint now rejects omitted workspace scope; the main-account export sends an explicit empty `workspace_id`.
+- Resume preparation uses the same paginated, scoped API and validates that `next_after` advances, avoiding an unbounded or silently truncated direct client query.
+- This is source-level scope/integrity hardening; no actual customer export or browser round-trip was run.
+
+**P6 remains PARTIAL.** PDF/print, DOCX, PPTX, XLSX, RTL/LTR and large-file browser round-trip tests remain outstanding.
