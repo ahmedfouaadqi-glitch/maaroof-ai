@@ -42,15 +42,27 @@ Persistent archive/restore cannot be implemented safely without inspecting and v
 - Every archive/restore event must record actor, timestamp, target, and outcome.
 - Any future schema change must be additive, reversible, tested against a confirmed non-production database, and must not use cascade deletion.
 
+## Additional non-destructive sweep — 2026-11-19
+
+- Schedule deletion now transitions the schedule to `cancelled`; the schedule row and history remain.
+- Knowledge-space deletion now transitions the existing `status` field to `archived`; the same space can be restored through the existing `updateKnowledgeSpace(status: "active")` contract. Archived spaces are read-only in the UI.
+- Physical knowledge-asset deletion is rejected by the server function with `knowledge_asset_delete_disabled_non_destructive_mode`; the UI no longer exposes the delete control.
+- The in-workspace file manager no longer exposes storage/object or attachment-row deletion.
+- Maaroof Memory no longer exposes individual or bulk delete controls. Existing automatic memory pruning remains disabled.
+- Added `knowledge_asset_delete` to the shared destructive-operation guard and its unit tests.
+- Static review of all API route files classified remaining cleanup operations: reserved visibility-trial rollback and newly uploaded orphan-file cleanup are transactional cleanup; OAuth state cleanup and publishing-channel disconnect are credential/session lifecycle operations; admin plan/role/CMS deletion is administrative configuration/content, not workspace or tool-result history.
+
+**No data rows, storage objects, archive state, or restore state were changed during this source-code work. No migration was created.**
+
 ## P1 status
 
-**PARTIAL — destructive controls addressed in the reviewed paths; full P1 acceptance is not claimed.**
+**PARTIAL — reviewed user-facing destructive paths are blocked, hidden, or converted to reversible state transitions; full P1 acceptance is not claimed.**
 
 Outstanding:
-- Complete search of every destructive path in the repository.
-- Persistent archive/restore implementation and tests.
-- Verification of persisted owner/workspace isolation and cascade behavior is explicitly excluded by the current instruction not to inspect Supabase.
-- Production build result for the latest commit was pending at document creation.
+- Finish the repository-wide sweep of any remaining non-API client-side deletion paths.
+- Implement and test coherent archive/restore for complete workspace subtrees; the existing knowledge-space status alone is not a workspace archive system.
+- Verify persisted owner/workspace isolation and cascade behavior only if the Supabase boundary is explicitly reopened.
+- UI-only removal of memory and attachment deletion controls is not a substitute for verified RLS enforcement.
 
 ## تنفيذ إضافي بعد مراجعة المسارات — 2026-11-17
 

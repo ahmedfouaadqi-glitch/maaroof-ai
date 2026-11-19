@@ -73,3 +73,15 @@
 - أضيفت إعادة ضبط للهوية والنتائج عند الانتقال بين المساحات، والتحقق من تطابق `workspace.id` مع المعرف المختار قبل استعمال ملف المساحة.
 
 **الحالة:** هذا يغلق فجوة تمرير السياق في المكونات التي تمت مراجعتها، لكنه لا يثبت بعد أن كل endpoint وكل جدول يقبل ويحفظ النطاق. تبقى مراجعة بقية المكونات والمسارات واختبارات متصفح/قاعدة بيانات لازمة.
+
+
+## Additional job-history scope hardening — 2026-11-19
+
+- `GET /api/maaroof-jobs?id=...` now requires an explicit `workspace_id` query parameter unless the authenticated owner explicitly requests `all_workspaces=1`. An empty value explicitly selects the main-account scope.
+- `POST /api/maaroof-jobs` cancellation now requires the `workspace_id` property, including explicit `null` for the main account, and filters the target job by that exact scope.
+- The workspace stop action now sends the active workspace ID.
+- Opening a previous job polls using that job's recorded `workspace_id`, not a potentially changed current selection.
+- Resume preparation now loads all job events through the paginated, scope-checked API rather than querying `maaroof_job_events` directly from the workspace page.
+- Added pure unit tests for omitted versus explicitly-null workspace scope.
+
+**P3 remains PARTIAL.** These changes harden source-level request scope; they do not prove persisted row isolation, RLS, or every table's workspace contract. No Supabase connection or migration inspection was performed.

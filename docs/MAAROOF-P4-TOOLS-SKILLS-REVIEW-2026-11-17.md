@@ -8,7 +8,7 @@
 ## Verified inventory
 
 - `TOOL_CATALOG`: 24 unique tool keys.
-- `TOOL_OPTIONS`: 18 option-bearing tool keys.
+- `TOOL_OPTIONS`: 17 option-bearing tool keys (after removing stale options for the centrally paused competitor monitor).
 - Every `TOOL_OPTIONS` key resolves to a key in `TOOL_CATALOG` (also covered by the existing unit test).
 - `MAAROOF_SKILLS`: 21 skills.
 - Every tool referenced by a skill exists in `TOOL_CATALOG` (covered by the existing unit test).
@@ -19,10 +19,10 @@
 
 ## Findings and boundaries
 
-1. `TOOL_OPTIONS` is a partial options registry, not a complete endpoint contract inventory. The 24 tool keys and 18 option keys are not expected to be identical; the six catalog keys without an options entry require individual classification before treating them as gaps.
+1. `TOOL_OPTIONS` is a partial options registry, not a complete endpoint contract inventory. The 24 tool keys and 17 option keys are not expected to be identical; the seven catalog keys without an options entry require individual classification before treating them as gaps.
 2. Existing tests verify registry membership and skill-to-tool references. They do not prove that every declared option matches the current request schema and validation behavior of its API route.
 3. A route inventory contains 36 files under `src/routes/api/`; some are system/public/webhook routes and not direct tool endpoints. Route-to-tool mapping remains a separate task.
-4. `competitor_monitor` still declares an action enum including `delete`; it is excluded from skills by the existing test, but the endpoint itself remains a direct route and needs separate lifecycle/authorization review.
+4. `competitor_monitor` is centrally paused (the route returns 503 before auth/provider/billing work) and is excluded from skills. Its stale planner options, including the unsupported `delete` action, were removed on 19 November; the catalog key and disabled UI remain for an explicit paused-state explanation.
 5. External skill packages remain inactive and non-executable. No imported script or package was executed.
 6. No live provider call, paid operation, model probe, or Supabase query was performed.
 
@@ -52,12 +52,14 @@
 
 ## تصنيف مفاتيح الكتالوج غير الموجودة في TOOL_OPTIONS
 
-المقارنة المصدرية أظهرت ستة مفاتيح بلا تعريف في `TOOL_OPTIONS`، ولا تعدّ تلقائياً أدوات مفقودة:
-- `maaroof`: مدخل المنسق الرئيسي، وله عقد API مستقل.
-- `translate`: أداة من مجموعة `tools`، ويحتاج عقد ترجمة مستقلاً؛ لم يُعثر على مفتاح options له في السجل.
-- `agent.command` و`agent.run_targets` و`agent.visibility` و`teach_space`: مصنفة `group: agent`، وليست أدوات مباشرة ذات نموذج options مماثل للأدوات الثماني عشرة.
+بعد إزالة خيارات الأداة الموقوفة، توجد سبعة مفاتيح بلا تعريف في `TOOL_OPTIONS`، ولا تعدّ تلقائياً أدوات مفقودة:
+- `maaroof`: مدخل المنسق الرئيسي عبر `/api/maaroof`، وله عقد طلب مستقل.
+- `translate`: وظائف ترجمة خادمية في `translate.functions.ts` و`translate-export.functions.ts`؛ لا يوجد مسار API مستقل أو مكوّن أداة مباشر.
+- `agent.command` و`agent.run_targets` و`agent.visibility`: مفاتيح من مجموعة `agent`؛ وظائف الوكيل القديمة موجودة في `agent.functions.ts` و`agent.server.ts`، لكن الربط الدقيق لكل مفتاح مع دالة تشغيل لم يثبت من call-sites.
+- `teach_space`: وظائف خادمية في `teaching.functions.ts` ومكوّن `KnowledgeSpaces`؛ ليس عقد API مباشر ضمن `/api/*`.
+- `competitor_monitor`: أداة موجودة في الكتالوج لكنها موقوفة مركزياً؛ لا تُعرض لها خيارات تشغيل إلى أن يعاد تفعيلها بعد مراجعة مستقلة.
 
-**الاستنتاج:** سلامة عضوية المفاتيح مثبتة، لكن تصنيف العقود الستة لا يغني عن تتبع مسارات استدعائها الفعلية؛ يبقى هذا الجزء من P4 جزئياً.
+**الاستنتاج:** سلامة عضوية المفاتيح مثبتة، لكن المفاتيح السبعة تحتاج تصنيفاً تشغيلياً مستقلاً؛ لا يجوز تحويلها تلقائياً إلى endpoints أو خيارات تنفيذ.
 
 ## خريطة مكونات الواجهة إلى مسارات API — عينة مصدرية موثقة
 
@@ -82,3 +84,30 @@
 | `ReportBuilder` | استعلامات Supabase مباشرة | بيانات المقاييس مقيّدة؛ القوالب وسجل الأدوات القديم مخفيان داخل مساحات العميل |
 
 هذه خريطة endpoint strings التي جرى التحقق منها في المكونات المحددة، وليست بعد جدولاً كاملاً لكل callbacks أو server functions أو كل 24 مفتاح كتالوج.
+
+
+## خريطة عقد الأدوات ذات الخيارات — 2026-11-19
+
+| ToolKey | API / server contract | واجهة الاستخدام | نطاق/ملاحظة مصدرية |
+|---|---|---|---|
+| `analyze` | `POST /api/analyze` | `Sandbox` | Bearer auth + `workspaceGuard`; يرسل `workspace_id` |
+| `suggest` | `POST /api/suggest` | `PostSuggester` | Bearer auth + `workspaceGuard` |
+| `compare` | `POST /api/compare` | `CompetitorCompare` | Bearer auth + `workspaceGuard` |
+| `known` | `POST /api/known` | `KnownDiscovery` | Bearer auth + `workspaceGuard`; يفشل مغلقاً عند تعذر نطاق التخزين |
+| `feasibility` | `POST /api/feasibility` | `FeasibilityStudy` | Bearer auth + `workspaceGuard` |
+| `bizdev` | `POST /api/bizdev` | `BizDev` | Bearer auth + `workspaceGuard` |
+| `research` | `POST /api/research` | `SmartResearch` | Bearer auth + `workspaceGuard` |
+| `visibility` | `POST /api/visibility` | `VisibilityIntelligence` | يتحقق يدوياً من ملكية مساحة العمل؛ لا يستخدم `workspaceGuard` |
+| `brand_boost` | `POST /api/brand-boost` مع `brand-authority` و`brand-boost-report-settings` و`site-discovery` كمسارات مساندة | `BrandBoostAgent` | سياق المساحة يمر عبر المكوّن؛ المسارات المساندة لها عقود مستقلة |
+| `company_email` | `POST /api/company-email` | `CompanyOutreach` | Bearer auth + `workspaceGuard` |
+| `applied_ranking` | `POST /api/applied-ranking` | `AppliedRanking` | Bearer auth + `workspaceGuard` |
+| `geo_strategist` | `POST /api/geo-strategist` | `GeoStrategist` | Bearer auth + `workspaceGuard`; لا يُشغّل مساحة عميل دون سياق صالح |
+| `social_analysis` | `POST /api/social-analysis` | `VisibilityIntelligence` بوضع social | Bearer auth + `workspaceGuard` |
+| `what_if` | `POST /api/what-if` | `WhatIfSimulator` | Bearer auth + `workspaceGuard`؛ baseline مقيّد بالنطاق |
+| `brand_authority` | `POST /api/brand-authority` | جزء من `BrandBoostAgent` | مسار فرعي وليس بطاقة أداة مستقلة في `TOOL_UI` |
+| `geo_rewrite` | `POST /api/geo-rewrite` | إجراء مضمّن في `Sandbox` | مسار فرعي وليس بطاقة أداة مستقلة في `TOOL_UI` |
+| `keyword_intelligence` | `POST /api/keyword-upload` ثم `POST /api/dual-result` | `KeywordIntelligence` | رفع الملف والتحليل منفصلان؛ يمرر `workspace_id` |
+
+`security_scan` و`report` مفاتيح واجهة إضافية في `TOOL_UI` وليسا `ToolKey` داخل `TOOL_CATALOG`. `competitor_monitor` موجود في الكتالوج لكنه موقوف، وخياراته لم تعد تُعرض على المخطط.
+
+هذه خريطة source-level للمكونات والمسارات التي ظهرت في الملفات المحددة، وليست إثباتاً لتشغيل فعلي أو RLS أو عقد تخزين حي. ما زال يلزم تدقيق كل حقل من حقول `TOOL_OPTIONS` مقابل validators الفعلية، ومراجعة callback/authorization لكل مكوّن، ومراجعة تراخيص الحزم الخارجية قبل أي تفعيل.
