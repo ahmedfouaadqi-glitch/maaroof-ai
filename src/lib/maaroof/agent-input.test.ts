@@ -32,6 +32,9 @@ describe("agent-input", () => {
     expect(missingFields("keyword_intelligence", filled)).toEqual([]);
     expect(missingFields("keyword_intelligence", { site: "https://example.com" })).toEqual([]);
     expect(missingFields("keyword_intelligence", { site: "not-a-url" })).toEqual(["brand"]);
+    expect(missingFields("keyword_intelligence", { brand: "Acme" })).toEqual(["category"]);
+    expect(missingFields("keyword_intelligence", { brand: "Acme", category: "Retail" })).toEqual([]);
+
   });
 
   it("passes a prior entity URL to keyword intelligence as site", () => {
