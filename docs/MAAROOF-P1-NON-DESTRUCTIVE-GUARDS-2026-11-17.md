@@ -49,6 +49,7 @@ Persistent archive/restore cannot be implemented safely without inspecting and v
 - Physical knowledge-asset deletion is rejected by the server function with `knowledge_asset_delete_disabled_non_destructive_mode`; the UI no longer exposes the delete control.
 - The in-workspace file manager no longer exposes storage/object or attachment-row deletion.
 - Maaroof Memory no longer exposes individual or bulk delete controls. Existing automatic memory pruning remains disabled.
+- Autonomous-agent targets are deactivated through the existing `active` state instead of deleting their rows; completed `agent_tasks` history no longer exposes a delete control.
 - Added `knowledge_asset_delete` to the shared destructive-operation guard and its unit tests.
 - Static review of all API route files classified remaining cleanup operations: reserved visibility-trial rollback and newly uploaded orphan-file cleanup are transactional cleanup; OAuth state cleanup and publishing-channel disconnect are credential/session lifecycle operations; admin plan/role/CMS deletion is administrative configuration/content, not workspace or tool-result history.
 
