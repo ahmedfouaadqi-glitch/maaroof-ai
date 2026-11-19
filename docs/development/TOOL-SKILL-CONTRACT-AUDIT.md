@@ -368,3 +368,13 @@
 - keyword_intelligence: أضيفت llms_full وnegatives وalexandria إلى الحقول العليا المستقرة.
 - brand_boost: أضيف plan_source.
 هذه الحقول لا تتحول إلى runtime response validator؛ تبقى بعض النتائج nested/dynamic، ويجب الحفاظ على route كمرجع نهائي.
+
+
+## 34. أنواع حقول السياق المحقونة
+
+أضيفت metadata لأنواع حقول السياق التي يحقنها orchestrator أو واجهة الأداة، وليس فقط مدخلات planner:
+- `lang` وحقول workspace/URL تُعامل كنصوص.
+- `scope` و`geo_scope` تُعامل ككائنات وفق أنواع Body.
+- حقول `official_website` و`website_url` تُعامل كنصوص.
+- القيم null الاختيارية تبقى غائبة ولا تُرفض، بينما القيم ذات النوع الخاطئ تُسجل كـ warning أو تتحول إلى clarification إذا كانت مطلوبة.
+تمت مراجعة انتماء كل metadata field إلى إحدى طبقات fields/uiFields/contextFields بواسطة اختبار.
