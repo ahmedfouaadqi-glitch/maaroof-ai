@@ -164,20 +164,42 @@ function WorkspacePage() {
   useEffect(() => { try { const v = JSON.parse(localStorage.getItem("ws-run-options") || "null"); if (v && typeof v === "object") setRunOpts((o) => ({ ...o, ...v })); } catch {} }, []);
   const setOpt = (k: "salvage_on_failure" | "focused_plan" | "parallel_tools", v: boolean) => setRunOpts((o) => { const n = { ...o, [k]: v }; try { localStorage.setItem("ws-run-options", JSON.stringify(n)); } catch {} return n; });
   const [resumeFrom, setResumeFrom] = useState<{ id: string; reused: number; total: number; left?: number; leftTokens?: number; balance?: number | null } | null>(null);
-  async function prepareResume(id: string) {
+  async function prepareResume(id: string, workspaceId: string | null) {
     setResumeFrom({ id, reused: 0, total: 0 });
-    const { data } = await (supabase as any).from("maaroof_job_events").select("payload").eq("job_id", id).eq("event_type", "tool_result").limit(200);
-    const { data: cat } = await (supabase as any).from("maaroof_job_events").select("payload").eq("job_id", id).eq("event_type", "tool_catalog").order("seq", { ascending: false }).limit(1);
-    const { reusableResults, remainingCost } = await import("@/lib/maaroof/jobs");
-    const payloads = (data || []).map((e: any) => e.payload);
-    const tools = new Set(payloads.map((p: any) => p?.tool).filter(Boolean));
-    const reused = Object.keys(reusableResults(payloads));
-    const catalog = cat?.[0]?.payload;
-    const planned: string[] = (catalog?.tools || []).filter((t: any) => t?.selected).map((t: any) => String(t.key));
-    const prices: Record<string, number> = {};
-    for (const t of catalog?.tools || []) prices[String(t.key)] = Number(t.cost) || 0;
-    const rc = remainingCost(planned.length ? planned : Array.from(tools) as string[], reused, prices);
-    setResumeFrom({ id, reused: reused.length, total: tools.size, left: rc.tools.length, leftTokens: rc.tokens, balance: catalog?.balance ?? null });
+    try {
+      const token = session?.access_token || (await supabase.auth.getSession()).data.session?.access_token;
+      if (!token) throw new Error("auth_required");
+      const events: any[] = [];
+      let after = 0;
+      while (true) {
+        const query = new URLSearchParams({ id, after: String(after), event_limit: "1000", workspace_id: workspaceId ?? "" });
+        const response = await fetch("/api/maaroof-jobs?" + query.toString(), {
+          headers: { Authorization: "Bearer " + token },
+          cache: "no-store",
+        });
+        if (!response.ok) throw new Error("task_events_unavailable");
+        const body = await response.json();
+        if (body?.error || !Array.isArray(body?.events)) throw new Error("task_events_unavailable");
+        events.push(...body.events);
+        if (body.has_more_events !== true) break;
+        const nextAfter = Number(body.next_after);
+        if (!Number.isFinite(nextAfter) || nextAfter <= after) throw new Error("task_events_pagination_invalid");
+        after = nextAfter;
+      }
+      const { reusableResults, remainingCost } = await import("@/lib/maaroof/jobs");
+      const payloads = events.filter((event) => event.event_type === "tool_result").map((event) => event.payload);
+      const tools = new Set(payloads.map((payload: any) => payload?.tool).filter(Boolean));
+      const reused = Object.keys(reusableResults(payloads));
+      const catalog = [...events].reverse().find((event) => event.event_type === "tool_catalog")?.payload;
+      const planned: string[] = (catalog?.tools || []).filter((tool: any) => tool?.selected).map((tool: any) => String(tool.key));
+      const prices: Record<string, number> = {};
+      for (const tool of catalog?.tools || []) prices[String(tool.key)] = Number(tool.cost) || 0;
+      const rc = remainingCost(planned.length ? planned : Array.from(tools) as string[], reused, prices);
+      setResumeFrom({ id, reused: reused.length, total: tools.size, left: rc.tools.length, leftTokens: rc.tokens, balance: catalog?.balance ?? null });
+    } catch (error: any) {
+      setResumeFrom(null);
+      setError(String(error?.message || c.failed));
+    }
   }
   const [selectedModels, setSelectedModels] = useState<string[]>(ENGINE_LIST.map((engine) => engine.key));
   const [running, setRunning] = useState(false);
@@ -210,7 +232,7 @@ function WorkspacePage() {
     setEvents([]); setError(""); setJobId(j.id); setGoal(j.goal || "");
     setRunning(!["completed", "failed", "cancelled"].includes(j.status));
     goMain();
-    try { await watchJob(j.id, 0, token, false); } catch (e: any) { setRunning(false); setError(String(e?.message || c.failed)); }
+    try { await watchJob(j.id, 0, token, false, j.workspace_id ?? null); } catch (e: any) { setRunning(false); setError(String(e?.message || c.failed)); }
   }
   function continuePastJob(j: PastJob) {
     watcherRef.current += 1;
@@ -223,7 +245,7 @@ function WorkspacePage() {
         : `استكمل المهمة السابقة بالاستناد إلى سياقها المحفوظ.\nالهدف الأصلي: ${j.goal}\nحالة المحاولة السابقة: ${statusLabel}\nراجع الأدلة ونتائج الأدوات المسجلة، وميّز ما اكتمل عما بقي، ثم اقترح الخطوة التالية. لا تفترض أن المحاولة السابقة نجحت.`;
     setChatPrefill({ text, taskId: j.id });
     // Preparing reuse is read-only; execution still requires the user's approval in Dardasha.
-    void prepareResume(j.id);
+    void prepareResume(j.id, j.workspace_id ?? null);
     if (Array.isArray(j.request_payload?.selected_skills)) {
       setSelectedSkills(j.request_payload.selected_skills.filter((key: unknown) => typeof key === "string"));
     }
@@ -398,7 +420,7 @@ function WorkspacePage() {
     return remaining;
   }
 
-  async function watchJob(id: string, after: number, token: string, allWorkspaces = false) {
+  async function watchJob(id: string, after: number, token: string, allWorkspaces = false, workspaceId: string | null = activeWorkspaceId) {
     watcherRef.current += 1;
     const watcherId = watcherRef.current;
     let cursor = after;
@@ -412,7 +434,7 @@ function WorkspacePage() {
         const tk = s.session?.access_token || token;
         const query = new URLSearchParams({ id, after: String(cursor) });
         if (allWorkspaces) query.set("all_workspaces", "1");
-        else query.set("workspace_id", activeWorkspaceId || "");
+        else query.set("workspace_id", workspaceId || "");
         response = await fetch("/api/maaroof-jobs?" + query.toString(), {
           headers: { Authorization: "Bearer " + tk },
           cache: "no-store",
