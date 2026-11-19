@@ -24,7 +24,6 @@ export const TOOL_OPTIONS: Record<string, ToolOptions> = {
   company_email: { fields: ["company", "sector", "notes", "goal", "mode"], enums: { mode: ["search", "email", "brand"] } },
   applied_ranking: { fields: ["brand_name", "brand_keywords", "app_name", "app_url", "website", "sector", "notes"] },
   geo_strategist: { fields: ["brand", "keywords", "goals"] },
-  competitor_monitor: { fields: ["action", "id", "brand", "competitors", "frequency_hours"], enums: { action: ["create", "list", "recheck", "delete", "policy"] } },
   social_analysis: { fields: ["brand", "keywords"] },
   what_if: { fields: ["brand", "changes", "kind", "axes"] },
   brand_authority: { fields: ["brand_name", "brand_keywords", "source_url", "ping"] },
