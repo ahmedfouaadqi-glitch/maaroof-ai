@@ -1,10 +1,18 @@
 import { buildTaskExportPayload } from "@/lib/maaroof/task-export";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, lazy, Suspense } from "react";
-const LazyAgentOps = lazy(() => import("@/components/maaroof/tabs/AgentOps").then((m) => ({ default: m.AgentOps })));
-const LazySchedules = lazy(() => import("@/components/maaroof/SchedulesPanel").then((m) => ({ default: m.SchedulesPanel })));
-const LazyApprovals = lazy(() => import("@/components/ApprovalQueue").then((m) => ({ default: m.ApprovalQueue })));
-const LazyKnowledgeSpaces = lazy(() => import("@/components/agent/KnowledgeSpaces").then((m) => ({ default: m.KnowledgeSpaces })));
+const LazyAgentOps = lazy(() =>
+  import("@/components/maaroof/tabs/AgentOps").then((m) => ({ default: m.AgentOps })),
+);
+const LazySchedules = lazy(() =>
+  import("@/components/maaroof/SchedulesPanel").then((m) => ({ default: m.SchedulesPanel })),
+);
+const LazyApprovals = lazy(() =>
+  import("@/components/ApprovalQueue").then((m) => ({ default: m.ApprovalQueue })),
+);
+const LazyKnowledgeSpaces = lazy(() =>
+  import("@/components/agent/KnowledgeSpaces").then((m) => ({ default: m.KnowledgeSpaces })),
+);
 import { I18nProvider, useI18n } from "@/lib/i18n";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { SiteHeader } from "@/components/SiteHeader";

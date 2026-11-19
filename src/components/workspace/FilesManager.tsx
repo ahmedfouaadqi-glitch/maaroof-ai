@@ -6,10 +6,27 @@ import { HelpTip } from "./HelpTip";
 
 type L = "ar" | "en" | "ku";
 const tr = (l: L, ar: string, en: string, ku: string) => (l === "en" ? en : l === "ku" ? ku : ar);
-type Row = { id: string; name: string; mime: string; size: number; created_at: string; status: string; analysis: string | null; path: string };
+type Row = {
+  id: string;
+  name: string;
+  mime: string;
+  size: number;
+  created_at: string;
+  status: string;
+  analysis: string | null;
+  path: string;
+};
 
 /** In-workspace file manager: lists the user's uploads and shows analysis without deleting retained files. */
-export function FilesManager({ lang, onClose, workspaceId = null }: { lang: L; onClose: () => void; workspaceId?: string | null }) {
+export function FilesManager({
+  lang,
+  onClose,
+  workspaceId = null,
+}: {
+  lang: L;
+  onClose: () => void;
+  workspaceId?: string | null;
+}) {
   const { user } = useAuth();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [view, setView] = useState<Row | null>(null);

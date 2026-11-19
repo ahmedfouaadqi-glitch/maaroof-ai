@@ -40,7 +40,13 @@ const APPROVAL_LABEL: Record<Schedule["approval_mode"], string> = {
   first_time_then_auto: "auto.first_approval_then_automatic",
 };
 
-export function SchedulesPanel({ workspaceId, defaultPrompt }: { workspaceId: string | null; defaultPrompt?: string }) {
+export function SchedulesPanel({
+  workspaceId,
+  defaultPrompt,
+}: {
+  workspaceId: string | null;
+  defaultPrompt?: string;
+}) {
   const { t } = useI18n();
   const list = useServerFn(listSchedules);
   const create = useServerFn(createSchedule);
@@ -56,7 +62,9 @@ export function SchedulesPanel({ workspaceId, defaultPrompt }: { workspaceId: st
   const [approval, setApproval] = useState<Schedule["approval_mode"]>("per_run");
   const [maxRuns, setMaxRuns] = useState<number>(0);
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    refresh();
+  }, []);
   useEffect(() => { if (defaultPrompt && !prompt) setPrompt(defaultPrompt); }, [defaultPrompt]);
 
   async function refresh() {

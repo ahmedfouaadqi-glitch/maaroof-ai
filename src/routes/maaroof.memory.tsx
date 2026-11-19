@@ -11,9 +11,16 @@ export const Route = createFileRoute("/maaroof/memory")({
   head: () => ({
     meta: [
       { title: "ذاكرة معروف · MAAROOF Ai" },
-      { name: "description", content: "Manage Maaroof's long-term memory: review, edit and prioritize the facts and preferences the AI agent uses to personalize your GEO workflows." },
+      {
+        name: "description",
+        content:
+          "Manage Maaroof's long-term memory: review, edit and prioritize the facts and preferences the AI agent uses to personalize your GEO workflows.",
+      },
       { property: "og:title", content: "Maaroof Memory · MAAROOF Ai" },
-      { property: "og:description", content: "Review and curate the long-term memory of the Maaroof AI agent." },
+      {
+        property: "og:description",
+        content: "Review and curate the long-term memory of the Maaroof AI agent.",
+      },
       { property: "og:url", content: "https://maaroofai.com/maaroof/memory" },
       { name: "robots", content: "noindex" },
     ],
