@@ -63,3 +63,15 @@ The new report foundations perform no database or network I/O. They are not yet 
 - تم إيقاف التقليم التلقائي للذاكرة وسحب مسار الحذف الدائم للمحادثات.
 
 **الحالة لا تزال PARTIAL.** هذه تغييرات ومراجعات مصدرية فقط. لم يتم إثبات ملكية البيانات في قاعدة البيانات، أو سلامة RLS، أو عمل الاستعادة الدائمة، أو تدفق تقارير متصل بمخزن دائم.
+
+
+## Additional execution/data-flow trace — 2026-11-19
+
+- Task-history list requests carry an explicit workspace scope and use bounded page windows.
+- Job-ID reads and cancellation require explicit workspace scope; the main account is represented by an explicit empty/null scope, not by omission.
+- Job polling, replay, export and resume now use the workspace recorded on the job. Resume reads event pages through the scoped API rather than issuing direct client queries to `maaroof_job_events`.
+- Event pagination uses ascending sequence numbers, an `event_limit + 1` look-ahead row, and a monotonic `next_after` cursor; the client rejects a non-advancing cursor.
+- P1 preservation controls now retain schedule, knowledge-space, attachment and memory records through cancellation/archive or removal of destructive UI controls. No data write was executed during this review.
+- P4 now distinguishes the 17 option-bearing tool contracts from the seven catalog entries that intentionally have no direct options schema; the centrally paused competitor monitor is not advertised to the planner.
+
+**P5 remains PARTIAL.** The source-level flow is clearer and job-history access is explicitly scoped, but persisted ownership, RLS, report-draft persistence, approval/share access logs and end-to-end data flow remain unverified. No Supabase, live provider, Cloudflare or paid execution was used.
