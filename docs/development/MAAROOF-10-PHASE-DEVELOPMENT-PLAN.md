@@ -446,3 +446,11 @@
 
 - تم عزل مفاتيح prototype عند نسخ مدخلات planner، والتحقق من ملكية مفاتيح metadata قبل قراءة نوع الحقل.
 - أضيف اختبار regression لـ `__proto__` و`constructor`.
+
+
+### استيضاح متطلبات endpoint
+
+- تمت إضافة فلترة آمنة لحقول `need[]` القادمة من endpoint وفق input contract.
+- الأخطاء التي تحمل حقولاً مطلوبة معلنة تتحول إلى clarification في orchestrator.
+- أصبحت مجموعات requiredAnyOf تُطلب بالتتابع، مع إضافة شرط category/site في keyword intelligence: الموقع الصالح يسمح بمحاولة استنتاج الفئة؛ وعند فشل الاستنتاج يطلب المنسق category.
+- أضيفت اختبارات لهذا السلوك.
