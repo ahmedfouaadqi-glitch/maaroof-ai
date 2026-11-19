@@ -620,7 +620,7 @@ function WorkspacePage() {
       await fetch("/api/maaroof-jobs", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
-        body: JSON.stringify({ job_id: id }),
+        body: JSON.stringify({ job_id: id, workspace_id: activeWorkspaceId }),
       });
     } catch (e: any) {
       setError(String(e?.message || c.failed));

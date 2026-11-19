@@ -22,6 +22,9 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
         const url = new URL(request.url);
         const id = url.searchParams.get("id");
         const allWorkspaces = url.searchParams.get("all_workspaces") === "1";
+        if (id && !allWorkspaces && !url.searchParams.has("workspace_id")) {
+          return Response.json({ error: "workspace_scope_required" }, { status: 400 });
+        }
         const { page, pageSize, from, to } = jobPageWindow(url.searchParams.get("page"), url.searchParams.get("page_size"));
         const workspaceRaw = url.searchParams.get("workspace_id");
         let workspaceId: string | null = null;
@@ -118,6 +121,7 @@ export const Route = createFileRoute("/api/maaroof-jobs")({
         if (!/^[0-9a-f-]{36}$/i.test(id)) return Response.json({ error: "bad_id" }, { status: 400 });
         const db = a.admin as any;
         const hasWorkspaceScope = Object.prototype.hasOwnProperty.call(body || {}, "workspace_id");
+        if (!hasWorkspaceScope) return Response.json({ error: "workspace_scope_required" }, { status: 400 });
         const rawWorkspaceId = typeof body?.workspace_id === "string" ? body.workspace_id.trim() : "";
         const workspaceId = rawWorkspaceId || null;
         if (workspaceId && !/^[0-9a-f-]{36}$/i.test(workspaceId)) return Response.json({ error: "invalid_workspace" }, { status: 400 });
