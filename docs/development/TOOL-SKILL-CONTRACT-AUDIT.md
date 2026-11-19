@@ -359,3 +359,12 @@
 - أضيفت حماية own-property عند قراءة إعدادات الأدوات وأنواع الحقول، وعند فحص وجود المدخل داخل كائن التنفيذ؛ الخصائص الموروثة لا تُعامل كمدخلات.
 - أضيفت enums لمدخلات suggest وفق Body الفعلي: contentType وlength وgoal، مع اختبار لإسقاط القيم غير المدعومة.
 - بقيت القيم ذات المجالات الديناميكية (مثل منصات المحركات) تحت تحقق route الحالي، ولم تُنسخ قائمة ثابتة قد تتقادم.
+
+
+## 33. استكمال حقول النتائج المستقرة
+
+تم توسيع حقول المخرجات الوصفية بعد مطابقة استجابات routes:
+- social_analysis: أضيفت حقول التغطية والمنصات والنتائج والـ sentiment basis وshare-of-voice basis وbilling settlement وحقول التحليل الاختيارية.
+- keyword_intelligence: أضيفت llms_full وnegatives وalexandria إلى الحقول العليا المستقرة.
+- brand_boost: أضيف plan_source.
+هذه الحقول لا تتحول إلى runtime response validator؛ تبقى بعض النتائج nested/dynamic، ويجب الحفاظ على route كمرجع نهائي.
