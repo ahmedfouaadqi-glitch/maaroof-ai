@@ -25,7 +25,7 @@ export const Route = createFileRoute("/maaroof/memory")({
 type Mem = { id: string; kind: string; content: string; importance: number; created_at: string; last_accessed_at: string };
 
 function MemoryPage() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { user, loading } = useAuth();
   const [items, setItems] = useState<Mem[]>([]);
   const [busy, setBusy] = useState(false);
