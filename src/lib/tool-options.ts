@@ -14,22 +14,81 @@ export type ToolOptions = {
 
 export const TOOL_OPTIONS: Record<string, ToolOptions> = {
   analyze: { fields: ["text"] },
-  suggest: { fields: ["description", "sourceText", "brand", "audience", "contentType", "count", "length", "platforms", "goal"] },
+  suggest: {
+    fields: [
+      "description",
+      "sourceText",
+      "brand",
+      "audience",
+      "contentType",
+      "count",
+      "length",
+      "platforms",
+      "goal",
+    ],
+  },
   compare: { fields: ["brand", "competitors", "keywords", "websites"] },
-  known: { fields: ["brand", "sector", "website", "depth", "force"], enums: { depth: ["quick", "deep"] } },
-  feasibility: { fields: ["project_name", "sector", "city", "problem", "solution", "target_audience", "revenue_model", "budget_iqd", "team_size", "timeline_months", "competitors", "notes"] },
-  bizdev: { fields: ["business_name", "sector", "stage", "city", "goals", "challenges", "channels", "budget_iqd", "current_revenue_iqd", "monthly_customers", "team_size", "notes"] },
+  known: {
+    fields: ["brand", "sector", "website", "depth", "force"],
+    enums: { depth: ["quick", "deep"] },
+  },
+  feasibility: {
+    fields: [
+      "project_name",
+      "sector",
+      "city",
+      "problem",
+      "solution",
+      "target_audience",
+      "revenue_model",
+      "budget_iqd",
+      "team_size",
+      "timeline_months",
+      "competitors",
+      "notes",
+    ],
+  },
+  bizdev: {
+    fields: [
+      "business_name",
+      "sector",
+      "stage",
+      "city",
+      "goals",
+      "challenges",
+      "channels",
+      "budget_iqd",
+      "current_revenue_iqd",
+      "monthly_customers",
+      "team_size",
+      "notes",
+    ],
+  },
   research: { fields: ["query", "mode"], enums: { mode: ["web", "company"] } },
-  visibility: { tabs: ["visibility", "share_of_voice", "history", "live_probe"], fields: ["brand", "keywords", "probe_engines", "notify"] },
-  brand_boost: { tabs: ["visibility", "research", "outreach", "run", "authority", "propagation", "logs"], fields: ["brand_name", "brand_keywords", "platforms"] },
-  company_email: { fields: ["company", "sector", "notes", "goal", "mode"], enums: { mode: ["search", "email", "brand"] } },
-  applied_ranking: { fields: ["brand_name", "brand_keywords", "app_name", "app_url", "website", "sector", "notes"] },
+  visibility: {
+    tabs: ["visibility", "share_of_voice", "history", "live_probe"],
+    fields: ["brand", "keywords", "probe_engines", "notify"],
+  },
+  brand_boost: {
+    tabs: ["visibility", "research", "outreach", "run", "authority", "propagation", "logs"],
+    fields: ["brand_name", "brand_keywords", "platforms"],
+  },
+  company_email: {
+    fields: ["company", "sector", "notes", "goal", "mode"],
+    enums: { mode: ["search", "email", "brand"] },
+  },
+  applied_ranking: {
+    fields: ["brand_name", "brand_keywords", "app_name", "app_url", "website", "sector", "notes"],
+  },
   geo_strategist: { fields: ["brand", "keywords", "goals"] },
   social_analysis: { fields: ["brand", "keywords"] },
   what_if: { fields: ["brand", "changes", "kind", "axes"] },
   brand_authority: { fields: ["brand_name", "brand_keywords", "source_url", "ping"] },
   geo_rewrite: { fields: ["text"] },
-  keyword_intelligence: { fields: ["brand", "site", "category", "competitors", "market_text", "attachment_id", "lang"], enums: { lang: ["ar", "en", "ku"] } },
+  keyword_intelligence: {
+    fields: ["brand", "site", "category", "competitors", "market_text", "attachment_id", "lang"],
+    enums: { lang: ["ar", "en", "ku"] },
+  },
 };
 
 /** One planner-readable line describing a tool's accepted options. */
