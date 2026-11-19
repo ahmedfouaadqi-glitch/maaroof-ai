@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { runAgentNow, runAgentCommand, publishToChannel } from "@/lib/agent.functions";
 import { ChannelsPanel } from "@/components/ChannelsPanel";
 import { apiFetch } from "@/lib/api-client";
-import { Loader2, Bot, Plus, Trash2, ExternalLink, Activity, Globe, Lightbulb, AlertTriangle, ShieldCheck, Play, Send, Sparkles, Eye, Send as SendIcon, MessageCircle } from "lucide-react";
+import { Loader2, Bot, Plus, ExternalLink, Activity, Globe, Lightbulb, AlertTriangle, ShieldCheck, Play, Pause, Send, Sparkles, Eye, Send as SendIcon, MessageCircle } from "lucide-react";
 import { useVisibility } from "@/lib/visibility";
 import { TokensBar } from "@/components/TokensBar";
 
@@ -128,9 +128,18 @@ export function AgentOps({ section }: { section: AgentOpsSection }) {
     load();
   };
 
-  const removeTarget = async (id: string) => {
-    await supabase.from("agent_targets").delete().eq("id", id);
-    load();
+  const toggleTarget = async (target: any) => {
+    if (!user) return;
+    const active = target.active !== false;
+    const { error } = await supabase.from("agent_targets")
+      .update({ active: !active })
+      .eq("id", target.id)
+      .eq("user_id", user.id);
+    if (error) {
+      setRunMsg({ ok: false, text: error.message });
+      return;
+    }
+    setTargets((current) => current.map((item) => item.id === target.id ? { ...item, active: !active } : item));
   };
 
   const errMap: Record<string, string> = {
@@ -393,13 +402,21 @@ export function AgentOps({ section }: { section: AgentOpsSection }) {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => runNow(tg.id)}
-                    disabled={runningId !== null}
+                    disabled={runningId !== null || tg.active === false}
                     className="inline-flex items-center gap-1 rounded-md border border-accent/40 bg-accent/10 px-2 py-1 text-xs font-semibold text-accent hover:bg-accent/20 disabled:opacity-50"
                   >
                     {runningId === tg.id ? <Loader2 className="size-3 animate-spin" /> : <Play className="size-3" />}
                     {runningId === tg.id ? t("ag_running") : t("ag_run_now")}
                   </button>
-                  <button onClick={() => removeTarget(tg.id)} className="text-destructive hover:text-destructive/70"><Trash2 className="size-4" /></button>
+                  <button
+                    type="button"
+                    onClick={() => void toggleTarget(tg)}
+                    title={tg.active === false ? t("auto.resume") : t("auto.pause")}
+                    aria-label={tg.active === false ? t("auto.resume") : t("auto.pause")}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    {tg.active === false ? <Play className="size-4" /> : <Pause className="size-4" />}
+                  </button>
                 </div>
               </div>
             ))}
@@ -428,6 +445,7 @@ export function AgentOps({ section }: { section: AgentOpsSection }) {
           </div>
         </div>
         <div className="space-y-2">
+          {taskTab === "history" && <p className="text-xs text-muted-foreground">{lang === "en" ? "Agent task history is retained; deletion is disabled." : lang === "ku" ? "مێژووی ئەرکەکانی ئاراستە دەپارێزرێت؛ سڕینەوە ناچالاکە." : "يُحتفظ بسجل مهام الوكيل؛ الحذف معطّل."}</p>}
           {visible.length === 0 && (
             <div className="rounded-2xl border border-border bg-card/70 p-6 text-center text-sm text-muted-foreground">
               {taskTab === "current" ? (t("ag_no_current_tasks") || t("auto.no_tasks_to_run_currently_click")) : t("ag_no_tasks")}
@@ -447,17 +465,7 @@ export function AgentOps({ section }: { section: AgentOpsSection }) {
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="text-xs text-muted-foreground">{new Date(tk.created_at).toLocaleString()}</div>
-                  <button
-                    onClick={async () => {
-                      if (!confirm(t("hist_confirm_delete"))) return;
-                      await supabase.from("agent_tasks").delete().eq("id", tk.id);
-                      setTasks((cur) => cur.filter((x) => x.id !== tk.id));
-                    }}
-                    title={t("hist_delete")}
-                    className="inline-flex items-center justify-center rounded-full border border-destructive/40 bg-destructive/10 p-1.5 text-destructive hover:bg-destructive/20"
-                  >
-                    <Trash2 className="size-3" />
-                  </button>
+
                 </div>
               </div>
               {tk.input && <div className="mt-2 text-xs text-muted-foreground">📍 {tk.input}</div>}
