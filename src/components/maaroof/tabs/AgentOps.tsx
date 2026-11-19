@@ -131,15 +131,17 @@ export function AgentOps({ section }: { section: AgentOpsSection }) {
   const toggleTarget = async (target: any) => {
     if (!user) return;
     const active = target.active === true;
-    const { error } = await supabase.from("agent_targets")
+    const { data: updated, error } = await supabase.from("agent_targets")
       .update({ active: !active })
       .eq("id", target.id)
-      .eq("user_id", user.id);
-    if (error) {
-      setRunMsg({ ok: false, text: error.message });
+      .eq("user_id", user.id)
+      .select("id, active")
+      .maybeSingle();
+    if (error || !updated) {
+      setRunMsg({ ok: false, text: error?.message || "target_update_failed" });
       return;
     }
-    setTargets((current) => current.map((item) => item.id === target.id ? { ...item, active: !active } : item));
+    setTargets((current) => current.map((item) => item.id === target.id ? { ...item, active: updated.active === true } : item));
   };
 
   const errMap: Record<string, string> = {
