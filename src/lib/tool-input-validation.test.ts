@@ -3,6 +3,14 @@ import { TOOL_OPTIONS } from "./tool-options";
 import { coerceToolInput, normalizeToolInput } from "./tool-input-validation";
 
 describe("typed tool input normalization", () => {
+  it("does not mutate object prototypes when preserving unknown input keys", () => {
+    const raw = JSON.parse('{"__proto__":{"polluted":true},"constructor":"kept"}');
+    const normalized = normalizeToolInput("analyze", raw);
+    expect(Object.getPrototypeOf(normalized)).toBeNull();
+    expect(Object.prototype.hasOwnProperty.call(normalized, "__proto__")).toBe(true);
+    expect(({} as any).polluted).toBeUndefined();
+  });
+
   it("uses per-tool types when a shared field has different endpoint shapes", () => {
     const feasibility = normalizeToolInput("feasibility", {
       competitors: ["Alpha", "Beta"],
