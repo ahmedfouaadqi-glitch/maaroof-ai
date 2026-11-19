@@ -61,6 +61,7 @@ Persistent archive/restore cannot be implemented safely without inspecting and v
 
 Outstanding:
 - Finish the repository-wide sweep of any remaining non-API client-side deletion paths.
+- The protected `ai-engines.functions.ts` and `maaroof-models.functions.ts` modules were deliberately not opened or modified; their review remains excluded by the model/engine protection boundary.
 - Implement and test coherent archive/restore for complete workspace subtrees; the existing knowledge-space status alone is not a workspace archive system.
 - Verify persisted owner/workspace isolation and cascade behavior only if the Supabase boundary is explicitly reopened.
 - UI-only removal of memory and attachment deletion controls is not a substitute for verified RLS enforcement.
