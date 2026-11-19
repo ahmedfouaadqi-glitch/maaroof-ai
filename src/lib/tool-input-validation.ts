@@ -41,12 +41,12 @@ function flatten(value: unknown): string {
  */
 export function normalizeToolInput(tool: string, raw: unknown): Record<string, unknown> {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
-  const out: Record<string, unknown> = {};
+  const out = Object.create(null) as Record<string, unknown>;
   const fieldTypes = TOOL_OPTIONS[tool]?.fieldTypes || {};
 
   for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
     if (value == null) continue;
-    const declaredType = fieldTypes[key];
+    const declaredType = Object.prototype.hasOwnProperty.call(fieldTypes, key) ? fieldTypes[key] : undefined;
 
     if (declaredType === "string|number") {
       if (typeof value === "number" && Number.isFinite(value)) out[key] = value;
