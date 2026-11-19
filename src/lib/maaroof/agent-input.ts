@@ -182,7 +182,10 @@ export function missingFields(tool: string, input: Record<string, any>): string[
       }
       return value.length >= 2;
     });
-    if (!satisfied) missing.push(group[0] || "brand");
+    if (!satisfied) {
+      missing.push(group[0] || "brand");
+      break;
+    }
   }
   return missing;
 }
