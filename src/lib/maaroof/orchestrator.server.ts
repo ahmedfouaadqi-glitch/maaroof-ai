@@ -4,7 +4,7 @@ import { buildEvidenceFinalAnswer } from "./finalizer";
 // Maaroof orchestrator: Plan → Act → Reflect over the existing 16 tool endpoints.
 // Direct fetch to Lovable AI Gateway + internal HTTP to /api/* routes (worker-internal).
 import { describeToolOptions, enforceEnums, TOOL_OPTIONS } from "@/lib/tool-options";
-import { coerceToolInput, normalizeToolInput } from "@/lib/tool-input-validation";
+import { coerceToolInput, filterDeclaredNeedFields, normalizeToolInput } from "@/lib/tool-input-validation";
 import { checkEntityConsistency } from "@/lib/entity-consistency";
 import { fillToolInput, missingFields, clarifyQuestion, sanitizeReflection } from "./agent-input";
 import { sanitizeReport, planAsList, simulationSummary } from "./mode-report";
@@ -1316,6 +1316,32 @@ export async function runMaaroof(ctx: RunContext): Promise<{ runId: string }> {
           }
         }
         const ok = resp.ok && !sseError && json?.error !== "non_json_tool_response" && json?.error !== "empty_tool_response";
+        const endpointNeeds = !ok ? filterDeclaredNeedFields(step.tool, json?.need) : [];
+        if (endpointNeeds.length) {
+          const q = {
+            index: i,
+            tool: step.tool,
+            field: endpointNeeds[0],
+            question: clarifyQuestion(endpointNeeds[0], ctx.language),
+          };
+          const output = {
+            needs_input: endpointNeeds,
+            endpoint_error: String(json?.error || "missing_input").slice(0, 80),
+          };
+          results.push({ tool: step.tool, ok: false, output });
+          await ctx.emit("clarify", q);
+          await ctx.emit("tool_result", {
+            index: i, tool: step.tool, ok: false, output, input_signature: inputSignature,
+            duration_ms: Date.now() - toolStartedAt,
+            transport: toolTransport,
+            http_status: resp.status,
+            content_type: resp.headers.get("content-type") || "",
+          });
+          try { await ctx.emit("narration", { tool: step.tool, index: i, text: N.narrateToolDone(step.tool, false, output, ctx.language as any) }); } catch {}
+          await logMsg("clarify", q);
+          await logMsg("tool_result", { tool: step.tool, ok: false, output });
+          return;
+        }
         // Live debate: only run when real visibility probe answers split on entity mention.
         if (ok && step.tool === "visibility" && Array.isArray(json?.probe?.answers)) {
           try {
