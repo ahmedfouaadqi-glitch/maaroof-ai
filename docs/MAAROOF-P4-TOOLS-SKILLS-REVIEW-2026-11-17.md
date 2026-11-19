@@ -38,7 +38,7 @@
 
 ## P4 status
 
-**PARTIAL — registry integrity and skill references verified.** Full endpoint request-contract mapping, external package license review, and operational engine dependency review remain to be completed. No catalog was changed.
+**PARTIAL — registry integrity and skill references verified.** A source-level route map is now recorded, and stale options for the paused competitor monitor were removed from `TOOL_OPTIONS`. Full field-by-field request-contract validation, external package license review, and operational engine dependency review remain outstanding. `TOOL_CATALOG`, `MAAROOF_SKILLS`, and the protected engine catalog were not changed.
 
 ## تنفيذ ومراجعة إضافية للمسارات — 2026-11-17
 
