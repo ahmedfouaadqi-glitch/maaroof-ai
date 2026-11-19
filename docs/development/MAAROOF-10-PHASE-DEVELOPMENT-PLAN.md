@@ -467,3 +467,9 @@
 
 - تم توسيع stable output fields لأدوات social_analysis وkeyword_intelligence وbrand_boost بعد مراجعة return payloads الفعلية.
 - ما زالت المخرجات وصفية وليست schema validator؛ لا يُسقط أي حقل من route response بسبب metadata.
+
+
+### أنواع حقول السياق
+
+- توسعت metadata لتغطي الحقول المحقونة من السياق مثل lang وscope وworkspace identifiers وURLs.
+- بقيت القيم null الاختيارية مقبولة كغياب للحقل، مع التحقق من القيم غير الفارغة.
