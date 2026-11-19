@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { TOOL_CATALOG } from "./tool-catalog";
-import { TOOL_OPTIONS } from "./tool-options";
+import { enforceEnums, TOOL_OPTIONS } from "./tool-options";
 import { MAAROOF_SKILLS } from "./maaroof/skill-catalog";
 import {
   TOOL_CONTRACTS,
@@ -116,6 +116,14 @@ describe("canonical tool execution contracts", () => {
     expect(TOOL_OPTIONS.keyword_intelligence.fields).not.toContain("estimate_only");
     expect(TOOL_OPTIONS.research.uiFields).toContain("channel_types");
     expect(TOOL_OPTIONS.social_analysis.contextFields).toContain("official_website");
+  });
+
+  it("enforces route-declared closed values for suggestion controls", () => {
+    expect(enforceEnums("suggest", {
+      contentType: "post",
+      length: "long",
+      goal: "not-a-supported-goal",
+    })).toEqual({ contentType: "post", length: "long" });
   });
 
   it("keeps required inputs and entity identity in the same tool metadata", () => {
