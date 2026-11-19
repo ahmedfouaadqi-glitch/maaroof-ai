@@ -123,7 +123,7 @@ describe("canonical tool execution contracts", () => {
     expect(TOOL_OPTIONS.company_email.brandField).toBe("company");
     expect(TOOL_OPTIONS.research.requiredFields).toEqual(["query"]);
     expect(TOOL_OPTIONS.geo_rewrite.minLength?.text).toBe(25);
-    expect(TOOL_OPTIONS.keyword_intelligence.requiredAnyOf).toEqual([["brand", "site"]]);
+    expect(TOOL_OPTIONS.keyword_intelligence.requiredAnyOf).toEqual([["brand", "site"], ["category", "site"]]);
   });
 
   it("preserves the legacy competitor_compare alias", () => {
