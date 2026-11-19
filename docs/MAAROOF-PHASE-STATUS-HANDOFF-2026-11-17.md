@@ -1,6 +1,6 @@
 # MAAROOF Ai — Phase Status and Handoff
 
-**Date:** 17 November 2026  
+**Date:** 19 November 2026  
 **Branch:** `feat/non-destructive-owner-workspaces-reports-2026-11-17`  
 **Baseline:** `e0570879c5b4ca3f238f44e890df4b865da904ff`
 
@@ -13,12 +13,12 @@ P0 broad audit and environment-file remediation were explicitly waived as prereq
 | Phase | Status | Evidence / remaining boundary |
 |---|---|---|
 | P0 | Waived for sequencing; **not passed** | Source-level risks R-06/07/08 fixed and R-13 clarified; .env risk remains open; Supabase and live tenant isolation excluded |
-| P1 | Partial | Automatic pruning stopped; tool-result/workspace/chat deletion blocked; schedules soft-cancelled; knowledge spaces archive/restore; knowledge asset, memory and attachment delete controls blocked/hidden. Workspace-subtree archive and persisted/RLS verification remain outstanding |
+| P1 | Partial | Automatic pruning stopped; tool-result/workspace/chat/agent-task deletion blocked; schedules soft-cancelled; knowledge spaces archive/restore; knowledge assets guarded; memory/files delete controls hidden; agent targets deactivate instead of delete. Workspace-subtree archive and persisted/RLS verification remain outstanding |
 | P2 | Partial | Owner-mode UI hides balance and pricing surfaces; server identity/RLS and single-owner enforcement not verified |
 | P3 | Partial | Direct-tool scope hardened; job-ID reads and cancellation require explicit workspace scope; resume/export use paginated scoped API reads. DB/RLS and all persisted tables remain unverified |
-| P4 | Partial | 24 tool keys, 17 option schemas, 21 skills, 70 package variants/69 names reviewed; source-level route map added; stale options removed for paused competitor monitor; field-level contract, callback and license audit outstanding |
-| P5 | Partial | Layer/data-flow evidence updated for MCI, knowledge, memory, jobs and reports; persisted auth/RLS paths excluded |
-| P6 | Partial | Export sanitization, omission accounting, complete task-event pagination and localized client HTML generator added; no browser/round-trip export suite |
+| P4 | Partial | 24 tool keys, 17 option schemas, 21 skills, 70 package variants/69 names reviewed; source-level route map added; paused competitor monitor has no planner options or UI API calls; original package ZIP/license, field-level contract and callback audit outstanding |
+| P5 | Partial | Layer/data-flow evidence updated for MCI, knowledge, memory, jobs and reports; task polling/resume/export now use explicit workspace scope and paginated events; persisted auth/RLS paths excluded |
+| P6 | Partial | Export sanitization, omission accounting, complete task-event pagination, scoped job replay/resume and localized client HTML generator added; no browser/round-trip export suite |
 | P7 | Foundation implemented | Versioned report contract v2 with six axes and evidence-linked validation; no persistent report store |
 | P8 | Foundation implemented | White Label sanitation, workspace binding and settings/preview components; no persistent settings manager integration |
 | P9 | Foundation implemented | Eight-section client HTML report with AR/EN/KU labels, RTL/LTR and print support; not connected to a persistent release workflow |
@@ -26,7 +26,7 @@ P0 broad audit and environment-file remediation were explicitly waived as prereq
 | P11 | Foundation implemented | Approval lifecycle state machine and tests; no persisted approval events or owner authorization |
 | P12 | Foundation implemented | Random share token, hash-only storage primitive, expiry/revocation and workspace-bound grant; no persistent grant route/access log |
 | P13 | Foundation implemented | Reports Center, preview and White Label components exist; no persistent Reports Center data/API integration |
-| P14 | **Passed at validated checkpoint** | Latest validated code checkpoint: 147 test files / 750 tests passed / 3 skipped; TypeScript and production build passed. Full lint remains diagnostic/non-blocking and not clean |
+| P14 | **Passed at validated checkpoint** | Run 44440410890: 147 test files / 750 tests passed / 3 skipped; TypeScript and production build passed. Lint diagnostic remains non-blocking with 27,591 errors and 152 warnings |
 | P15 | Handoff prepared | Isolated feature branch only; no PR, merge, deployment or change to main |
 
 ## Protected constraints verified
@@ -43,15 +43,15 @@ P0 broad audit and environment-file remediation were explicitly waived as prereq
 ## Validation run
 
 Validated implementation checkpoint:
-- Run ID: `44438260974`
-- URL: https://github.com/ahmedfouaadqi-glitch/maaroof-ai/actions/runs/44438260974
-- Commit: `1f12b8630b35e7d7b55bae6e745daca9e625c433`
+- Run ID: `44440410890`
+- URL: https://github.com/ahmedfouaadqi-glitch/maaroof-ai/actions/runs/44440410890
+- Commit: `c2f70897e75681a1412c94afb838d7ab92aac469`
 - Unit tests: **147 files passed; 750 tests passed; 3 skipped**.
 - TypeScript validation: passed.
 - Production build: passed.
-- Repository lint: non-blocking diagnostic; **27,683 errors and 152 warnings** remain, predominantly existing formatting violations. This is not a lint pass.
+- Repository lint: non-blocking diagnostic; **27,591 errors and 152 warnings** remain. This is not a lint pass.
 
-The latest source checkpoint validates the P1/P3/P4 code changes. Subsequent commits in this sequence update review documentation only.
+The latest source checkpoint validates the P1/P3/P4 changes, including the paused competitor-monitor UI correction. The 11 protected engine/council/probe files retain their baseline Git blob fingerprints.
 
 ## Release posture
 

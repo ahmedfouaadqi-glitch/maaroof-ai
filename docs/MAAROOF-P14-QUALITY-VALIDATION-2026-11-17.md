@@ -49,13 +49,13 @@ GitHub Actions run `44196303790` completed successfully for commit `32b05b7ff34a
 
 ## Latest validated implementation checkpoint — 2026-11-19
 
-GitHub Actions run **44438260974** completed successfully for commit `1f12b8630b35e7d7b55bae6e745daca9e625c433`.
+GitHub Actions run **44440410890** completed successfully for commit `c2f70897e75681a1412c94afb838d7ab92aac469`.
 
 - Unit tests: **147 test files passed; 750 tests passed; 3 skipped**.
 - TypeScript validation (`bunx tsc --noEmit`): passed.
 - Production build (`bun run build`): passed.
-- Repository lint diagnostic: **27,683 errors and 152 warnings**; remains non-blocking and is not a lint pass.
+- Repository lint diagnostic: **27,591 errors and 152 warnings** (27,743 total problems); it remains non-blocking and is not a lint pass.
 
-This validated code checkpoint includes the P1 non-destructive changes, P3 explicit job-workspace scoping and paginated resume reads, and the P4 removal of stale options for the paused competitor monitor. Later commits in this sequence update review documentation only.
+This checkpoint includes P1 schedule/knowledge-space non-destructive transitions, agent-target deactivation and history retention, P3 explicit job-workspace scoping and paginated resume reads, and P4 removal of stale paused-monitor options and UI API calls. Subsequent commits in this sequence update review documentation only.
 
 **P14 remains PARTIAL:** tests, TypeScript and production build pass at the checkpoint; full lint cleanup, browser E2E, multi-workspace tenant tests and live persisted isolation tests remain outstanding.
