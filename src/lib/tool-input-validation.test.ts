@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { TOOL_OPTIONS } from "./tool-options";
-import { coerceToolInput, normalizeToolInput } from "./tool-input-validation";
+import { coerceToolInput, filterDeclaredNeedFields, normalizeToolInput } from "./tool-input-validation";
 
 describe("typed tool input normalization", () => {
+  it("filters endpoint clarification requests to declared input fields", () => {
+    expect(filterDeclaredNeedFields("keyword_intelligence", ["category", "attachment_id", "admin_override", "__proto__"]))
+      .toEqual(["category", "attachment_id"]);
+    expect(filterDeclaredNeedFields("unknown_tool", ["brand"])).toEqual([]);
+    expect(filterDeclaredNeedFields("keyword_intelligence", "category")).toEqual([]);
+  });
+
   it("does not mutate object prototypes when preserving unknown input keys", () => {
     const raw = JSON.parse('{"__proto__":{"polluted":true},"constructor":"kept"}');
     const normalized = normalizeToolInput("analyze", raw);
