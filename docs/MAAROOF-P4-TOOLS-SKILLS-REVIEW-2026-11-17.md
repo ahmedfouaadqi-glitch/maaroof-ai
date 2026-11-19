@@ -22,7 +22,7 @@
 1. `TOOL_OPTIONS` is a partial options registry, not a complete endpoint contract inventory. The 24 tool keys and 17 option keys are not expected to be identical; the seven catalog keys without an options entry require individual classification before treating them as gaps.
 2. Existing tests verify registry membership and skill-to-tool references. They do not prove that every declared option matches the current request schema and validation behavior of its API route.
 3. A route inventory contains 36 files under `src/routes/api/`; some are system/public/webhook routes and not direct tool endpoints. Route-to-tool mapping remains a separate task.
-4. `competitor_monitor` is centrally paused (the route returns 503 before auth/provider/billing work) and is excluded from skills. Its stale planner options, including the unsupported `delete` action, were removed on 19 November; the catalog key and disabled UI remain for an explicit paused-state explanation.
+4. `competitor_monitor` is centrally paused (the route returns 503 before auth/provider/billing work) and is excluded from skills. Its stale planner options, including the unsupported `delete` action, were removed on 19 November. `KnownDiscovery` no longer calls the paused endpoint and retains only compare selection; `CompetitorMonitor` now renders a localized paused notice with no API calls.
 5. External skill packages remain inactive and non-executable. No imported script or package was executed.
 6. No live provider call, paid operation, model probe, or Supabase query was performed.
 
