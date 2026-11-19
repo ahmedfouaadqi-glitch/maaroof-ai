@@ -123,7 +123,7 @@ export function KnownDiscovery({ workspaceId = null, workspace = null }: { works
     return g;
   }, [result]);
 
-  const maxComp = 5;
+  const maxComp = 4;
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-border bg-card/40 p-4">
